@@ -1,16 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "../../lib/supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
+import { useRouter } from "next/navigation";
 
 export default function SignIn() {
-  const supabase = createClient();
+  const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
   const handleLogin = async () => {
+    setLoading(true);
+    setMessage("");
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -18,10 +23,15 @@ export default function SignIn() {
 
     if (error) {
       setMessage("Login failed ❌");
-      console.log(error);
-    } else {
-      setMessage("Logged in ✅");
+      console.error(error.message);
+      setLoading(false);
+      return;
     }
+
+    setMessage("Logged in ✅");
+
+    // 🚀 تحويل مباشر بعد تسجيل الدخول
+    router.push("/dashboard");
   };
 
   return (
@@ -46,7 +56,9 @@ export default function SignIn() {
 
       <br /><br />
 
-      <button onClick={handleLogin}>Login</button>
+      <button onClick={handleLogin} disabled={loading}>
+        {loading ? "Loading..." : "Login"}
+      </button>
 
       <p>{message}</p>
     </div>
