@@ -1,21 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "../lib/supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function Home() {
   const [data, setData] = useState([]);
-  const supabase = createClient();
 
   useEffect(() => {
     const fetchData = async () => {
       const { data, error } = await supabase
         .from("customers")
-        .select("*")
+        .select("id, phone")
         .limit(5);
 
       if (error) {
-        console.log("ERROR:", error);
+        console.error("ERROR:", error.message);
       } else {
         setData(data);
       }
@@ -25,7 +24,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div>
+    <div style={{ padding: 20 }}>
       <h1>Connected to Supabase ✅</h1>
 
       {data.map((item) => (
