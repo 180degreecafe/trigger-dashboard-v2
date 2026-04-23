@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function TriggersPage() {
-  const supabase = createClient();
+  
 
   const [triggers, setTriggers] = useState([]);
   const [loading, setLoading] = useState(true);
