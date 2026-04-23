@@ -2,13 +2,6 @@
 
 import { useState } from "react";
 
-/* ---------- metadata (App Router) ---------- */
-export const metadata = {
-  title: "نقاط الولاء ⭐ | 180°",
-};
-
-/* ---------- page ---------- */
-
 export default function CheckPointsPage() {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -42,7 +35,7 @@ export default function CheckPointsPage() {
       } else {
         setError("فشل في إرسال رمز التحقق. حاول مرة أخرى.");
       }
-    } catch (err) {
+    } catch {
       setError("حدث خطأ أثناء الإرسال.");
     }
 
@@ -115,7 +108,7 @@ export default function CheckPointsPage() {
 
     return (
       <div className="mt-6 text-center">
-        <p className="mb-2">
+        <p className="mb-2 text-gray-800">
           🌟 مستوى الولاء: <strong>{tier.name}</strong>
         </p>
 
@@ -128,7 +121,7 @@ export default function CheckPointsPage() {
 
         <div className="w-full bg-gray-200 h-4 rounded-full mt-2">
           <div
-            className="bg-yellow-500 h-4 rounded-full transition-all"
+            className="bg-yellow-500 h-4 rounded-full transition-all duration-500"
             style={{ width: `${percent}%` }}
           />
         </div>
@@ -143,7 +136,8 @@ export default function CheckPointsPage() {
       dir="rtl"
       className="min-h-screen flex items-center justify-center bg-yellow-50 px-4"
     >
-      <div className="bg-white shadow-md rounded-lg p-6 max-w-md w-full text-center space-y-4">
+      {/* 🔥 FIX: forced light theme */}
+      <div className="bg-white text-gray-900 dark:bg-white dark:text-gray-900 shadow-md rounded-lg p-6 max-w-md w-full text-center space-y-4">
 
         <h1 className="text-2xl font-bold text-yellow-700">
           تحقق من نقاطك ⭐
@@ -159,7 +153,7 @@ export default function CheckPointsPage() {
               placeholder="مثال: 66334455"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="border p-3 w-full rounded text-lg text-center text-black placeholder-gray-400"
+              className="border border-gray-300 p-3 w-full rounded text-lg text-center text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
             />
 
             <button
@@ -183,7 +177,7 @@ export default function CheckPointsPage() {
               placeholder="أدخل الكود هنا"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
-              className="border p-3 w-full rounded text-lg text-center tracking-widest text-black"
+              className="border border-gray-300 p-3 w-full rounded text-lg text-center tracking-widest text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-400"
             />
 
             <button
