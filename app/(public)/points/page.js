@@ -2,6 +2,13 @@
 
 import { useState } from "react";
 
+/* ---------- metadata (App Router) ---------- */
+export const metadata = {
+  title: "نقاط الولاء ⭐ | 180°",
+};
+
+/* ---------- page ---------- */
+
 export default function CheckPointsPage() {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -10,7 +17,7 @@ export default function CheckPointsPage() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
 
-  /* ---------- OTP ---------- */
+  /* ---------- actions ---------- */
 
   const handleSendOtp = async () => {
     if (!phone) return;
@@ -35,7 +42,7 @@ export default function CheckPointsPage() {
       } else {
         setError("فشل في إرسال رمز التحقق. حاول مرة أخرى.");
       }
-    } catch {
+    } catch (err) {
       setError("حدث خطأ أثناء الإرسال.");
     }
 
@@ -91,7 +98,7 @@ export default function CheckPointsPage() {
     }
   };
 
-  /* ---------- tier ---------- */
+  /* ---------- helpers ---------- */
 
   const getTier = (spent) => {
     if (spent >= 40) return { name: "💎 بلاتيني", next: null };
@@ -108,21 +115,20 @@ export default function CheckPointsPage() {
 
     return (
       <div className="mt-6 text-center">
-        <p className="mb-2 font-medium">
-          🌟 مستوى الولاء: {tier.name}
+        <p className="mb-2">
+          🌟 مستوى الولاء: <strong>{tier.name}</strong>
         </p>
 
         {tier.next && (
           <p className="text-sm text-gray-500">
             💡 تبقى لك{" "}
-            {Math.max((tier.next - spent).toFixed(2), 0)} دينار للوصول إلى{" "}
-            {getTier(tier.next).name}
+            {Math.max((tier.next - spent).toFixed(2), 0)} دينار
           </p>
         )}
 
-        <div className="w-full bg-gray-200 h-4 rounded-full mt-3 overflow-hidden">
+        <div className="w-full bg-gray-200 h-4 rounded-full mt-2">
           <div
-            className="bg-yellow-500 h-4 transition-all duration-500"
+            className="bg-yellow-500 h-4 rounded-full transition-all"
             style={{ width: `${percent}%` }}
           />
         </div>
@@ -151,9 +157,9 @@ export default function CheckPointsPage() {
             <input
               type="tel"
               placeholder="مثال: 66334455"
-              className="border p-3 w-full rounded text-lg text-center"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
+              className="border p-3 w-full rounded text-lg text-center text-black placeholder-gray-400"
             />
 
             <button
@@ -169,15 +175,15 @@ export default function CheckPointsPage() {
         {step === "otp" && (
           <>
             <p className="text-gray-600">
-              🔒 أدخل كود التحقق المرسل على واتساب
+              🔒 أدخل كود التحقق
             </p>
 
             <input
               type="text"
               placeholder="أدخل الكود هنا"
-              className="border p-3 w-full rounded text-lg text-center tracking-widest"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
+              className="border p-3 w-full rounded text-lg text-center tracking-widest text-black"
             />
 
             <button
@@ -204,23 +210,24 @@ export default function CheckPointsPage() {
                 </p>
 
                 <p>
-                  ⭐ <strong>نقاطك الحالية:</strong> {result.points}
+                  ⭐ <strong>نقاطك:</strong> {result.points}
                 </p>
 
                 {renderProgressBar(result.spent)}
               </>
             ) : (
               <p className="text-red-500">
-                لم يتم العثور على عميل بهذا الرقم 😕
+                لم يتم العثور على عميل 😕
               </p>
             )}
           </div>
         )}
 
-        {/* ERROR */}
+        {/* Error */}
         {error && (
           <p className="text-red-500 text-sm">{error}</p>
         )}
+
       </div>
     </div>
   );
