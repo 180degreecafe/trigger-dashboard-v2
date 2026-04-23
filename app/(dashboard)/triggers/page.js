@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
-export default function TriggersPage() {
-  
+const triggerTypes = ["new", "churned", "inactive"];
 
+export default function TriggersPage() {
   const [triggers, setTriggers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState({});
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState([]);
 
   useEffect(() => {
     fetchTriggers();
@@ -17,6 +19,14 @@ export default function TriggersPage() {
   const fetchTriggers = async () => {
     setLoading(true);
 
+    // 🧠 جلب التريجرز اللي تم التعامل معها
+    const { data: actions } = await supabase
+      .from("trigger_actions")
+      .select("trigger_id");
+
+    const actedIds = actions?.map((a) => a.trigger_id) || [];
+
+    // 🎯 جلب التريجرز
     const { data, error } = await supabase
       .from("triggers")
       .select(`
@@ -28,12 +38,14 @@ export default function TriggersPage() {
         customers(phone)
       `)
       .order("created_at", { ascending: false })
-      .limit(100);
+      .limit(200);
 
     if (error) {
       console.error(error);
     } else {
-      setTriggers(data);
+      // 🔥 فلترة
+      const filtered = data.filter((t) => !actedIds.includes(t.id));
+      setTriggers(filtered);
     }
 
     setLoading(false);
@@ -48,9 +60,7 @@ export default function TriggersPage() {
           "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/send-offer",
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ trigger_id: trigger.id }),
           }
         );
@@ -64,7 +74,7 @@ export default function TriggersPage() {
         admin_name: "admin",
       });
 
-      // إزالة التريجر من الواجهة مباشرة (UX سريع)
+      // 🔥 إزالة فورية
       setTriggers((prev) => prev.filter((t) => t.id !== trigger.id));
     } catch (err) {
       console.error(err);
@@ -73,129 +83,146 @@ export default function TriggersPage() {
     setProcessing((prev) => ({ ...prev, [trigger.id]: false }));
   };
 
+  // 🔍 Search + Filter
+  const filteredTriggers = triggers.filter((t) => {
+    const matchSearch =
+      t.message?.toLowerCase().includes(search.toLowerCase()) ||
+      t.customers?.phone?.includes(search);
+
+    const matchFilter =
+      filters.length === 0 || filters.includes(t.type);
+
+    return matchSearch && matchFilter;
+  });
+
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
 
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-          Triggers
-        </h1>
+      <div className="mb-6">
+        <h1 className="text-xl md:text-2xl font-semibold">Triggers</h1>
         <p className="text-sm text-gray-500">
-          Manage customer triggers and take action
+          Pending customer triggers
         </p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Stat title="Total" value={triggers.length} />
-        <Stat title="Pending" value={triggers.length} />
-        <Stat title="Sent Today" value="--" />
-        <Stat title="Ignored" value="--" />
+      {/* Search */}
+      <input
+        placeholder="Search..."
+        className="w-full mb-4 px-4 py-2 border rounded-md"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+
+      {/* Filters */}
+      <div className="flex gap-2 mb-4 flex-wrap">
+        {triggerTypes.map((type) => (
+          <button
+            key={type}
+            onClick={() =>
+              setFilters((prev) =>
+                prev.includes(type)
+                  ? prev.filter((t) => t !== type)
+                  : [...prev, type]
+              )
+            }
+            className={`px-3 py-1 rounded-full text-sm border ${
+              filters.includes(type)
+                ? "bg-blue-600 text-white"
+                : "bg-white"
+            }`}
+          >
+            {type}
+          </button>
+        ))}
       </div>
 
-      {/* Table */}
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+      {/* Content */}
+      <div className="bg-white dark:bg-gray-900 border rounded-xl overflow-hidden">
 
         {loading ? (
+          <div className="p-6 text-center text-gray-500">Loading...</div>
+        ) : filteredTriggers.length === 0 ? (
           <div className="p-6 text-center text-gray-500">
-            Loading...
-          </div>
-        ) : triggers.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">
-            No triggers found
+            No pending triggers 🎉
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="border-b border-gray-200 dark:border-gray-800 text-left text-xs text-gray-500 uppercase">
-              <tr>
-                <th className="px-4 py-3">Customer</th>
-                <th className="px-4 py-3">Type</th>
-                <th className="px-4 py-3">Message</th>
-                <th className="px-4 py-3">Recommendation</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3 text-right">Action</th>
-              </tr>
-            </thead>
+          <>
+            {/* Desktop */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b text-xs text-gray-500 uppercase">
+                  <tr>
+                    <th className="px-4 py-3">Customer</th>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Message</th>
+                    <th className="px-4 py-3">Action</th>
+                  </tr>
+                </thead>
 
-            <tbody>
-              {triggers.map((t) => (
-                <tr
-                  key={t.id}
-                  className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-                >
-                  <td className="px-4 py-3 font-medium">
-                    {t.customers?.phone || "-"}
-                  </td>
+                <tbody>
+                  {filteredTriggers.map((t) => (
+                    <tr key={t.id} className="border-b">
+                      <td className="px-4 py-3">{t.customers?.phone}</td>
+                      <td className="px-4 py-3">{t.type}</td>
+                      <td className="px-4 py-3">{t.message}</td>
 
-                  <td className="px-4 py-3">
-                    <Badge type={t.type} />
-                  </td>
+                      <td className="px-4 py-3 space-x-2">
+                        <button
+                          onClick={() => handleAction(t, "send")}
+                          className="btn-green"
+                        >
+                          Send
+                        </button>
 
-                  <td className="px-4 py-3 text-gray-600">
-                    {t.message}
-                  </td>
+                        <button
+                          onClick={() => handleAction(t, "ignore")}
+                          className="btn-gray"
+                        >
+                          Ignore
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-                  <td className="px-4 py-3 font-medium text-blue-600">
-                    {t.recommendation}
-                  </td>
+            {/* Mobile */}
+            <div className="md:hidden space-y-3 p-3">
+              {filteredTriggers.map((t) => (
+                <div key={t.id} className="border p-4 rounded-lg">
+                  <div className="font-medium mb-1">
+                    {t.customers?.phone}
+                  </div>
 
-                  <td className="px-4 py-3 text-xs text-gray-400">
-                    {new Date(t.created_at).toLocaleString()}
-                  </td>
+                  <div className="text-sm text-gray-500 mb-2">
+                    {t.type}
+                  </div>
 
-                  <td className="px-4 py-3 text-right space-x-2">
+                  <div className="text-sm mb-3">{t.message}</div>
+
+                  <div className="flex gap-2">
                     <button
                       onClick={() => handleAction(t, "send")}
-                      disabled={processing[t.id]}
-                      className="px-3 py-1.5 text-xs rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                      className="flex-1 bg-green-600 text-white py-2 rounded"
                     >
                       Send
                     </button>
 
                     <button
                       onClick={() => handleAction(t, "ignore")}
-                      disabled={processing[t.id]}
-                      className="px-3 py-1.5 text-xs rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                      className="flex-1 bg-gray-200 py-2 rounded"
                     >
                       Ignore
                     </button>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
     </div>
-  );
-}
-
-/* ---------- Components ---------- */
-
-function Stat({ title, value }) {
-  return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
-      <div className="text-xs text-gray-500">{title}</div>
-      <div className="text-xl font-semibold">{value}</div>
-    </div>
-  );
-}
-
-function Badge({ type }) {
-  const colors = {
-    new: "bg-blue-100 text-blue-700",
-    churned: "bg-red-100 text-red-700",
-    inactive: "bg-yellow-100 text-yellow-700",
-  };
-
-  return (
-    <span
-      className={`px-2 py-1 text-xs rounded-full ${
-        colors[type] || "bg-gray-100 text-gray-700"
-      }`}
-    >
-      {type}
-    </span>
   );
 }
