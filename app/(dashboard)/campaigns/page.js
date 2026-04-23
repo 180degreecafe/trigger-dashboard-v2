@@ -147,7 +147,16 @@ export default function CampaignsPage() {
             <tbody>
               {campaigns.map((c) => (
                 <tr key={c.id} className="border-b">
-                  <td className="px-4 py-3 font-medium">{c.name}</td>
+
+                  {/* ✅ التعديل هنا فقط */}
+                  <td className="px-4 py-3 font-medium">
+                    <a
+                      href={`/campaign_responses?campaign_id=${c.id}`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      {c.name}
+                    </a>
+                  </td>
 
                   <td>
                     <span
