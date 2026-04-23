@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-/* ---------- helpers ---------- */
+/* ----------- helpers ---------- */
 
 const getTier = (spent) => {
   if (spent >= 40) return { name: "💎 Platinum", next: null };
