@@ -29,16 +29,8 @@ export default function TriggersPage() {
   const fetchTriggers = async () => {
     setLoading(true);
 
-    // ✅ نجيب التريجرز اللي تم التعامل معها
-    const { data: actions } = await supabase
-      .from("trigger_actions")
-      .select("trigger_id");
-
-    const actedIds = new Set(actions?.map((a) => a.trigger_id));
-
-    // ✅ نجيب التريجرز
     const { data, error } = await supabase
-      .from("triggers")
+      .from("pending_triggers") // ✅ أهم تغيير
       .select(`
         id,
         type,
@@ -53,9 +45,7 @@ export default function TriggersPage() {
     if (error) {
       console.error(error);
     } else {
-      // 🔥 فلترة حقيقية
-      const filtered = data.filter((t) => !actedIds.has(t.id));
-      setTriggers(filtered);
+      setTriggers(data || []);
     }
 
     setLoading(false);
@@ -84,7 +74,7 @@ export default function TriggersPage() {
         admin_name: "admin",
       });
 
-      // 🔥 حذف مباشر + ضمان عدم الرجوع
+      // 🔥 إزالة فورية (UX)
       setTriggers((prev) => prev.filter((t) => t.id !== trigger.id));
     } catch (err) {
       console.error(err);
@@ -93,7 +83,6 @@ export default function TriggersPage() {
     setProcessing((prev) => ({ ...prev, [trigger.id]: false }));
   };
 
-  // 🔍 Search + Filter
   const filteredTriggers = triggers.filter((t) => {
     const matchSearch =
       t.message?.toLowerCase().includes(search.toLowerCase()) ||
@@ -110,9 +99,11 @@ export default function TriggersPage() {
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Triggers</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Triggers
+        </h1>
         <p className="text-sm text-gray-500">
-          Real-time customer triggers
+          Pending customer triggers
         </p>
       </div>
 
@@ -151,7 +142,9 @@ export default function TriggersPage() {
       <div className="card">
 
         {loading ? (
-          <div className="p-6 text-center text-gray-500">Loading...</div>
+          <div className="p-6 text-center text-gray-500">
+            Loading...
+          </div>
         ) : filteredTriggers.length === 0 ? (
           <div className="p-6 text-center text-gray-500">
             No pending triggers 🎉
@@ -167,6 +160,7 @@ export default function TriggersPage() {
                     <th>Type</th>
                     <th>Message</th>
                     <th>Recommendation</th>
+                    <th>Date</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -182,10 +176,20 @@ export default function TriggersPage() {
                         <TypeBadge type={t.type} />
                       </td>
 
-                      <td className="text-gray-600">{t.message}</td>
+                      <td className="text-gray-600">
+                        {t.message}
+                      </td>
 
                       <td className="text-blue-600 font-medium">
                         {t.recommendation}
+                      </td>
+
+                      <td className="text-xs text-gray-500">
+                        <span
+                          title={new Date(t.created_at).toLocaleString()}
+                        >
+                          {formatTimeAgo(t.created_at)}
+                        </span>
                       </td>
 
                       <td className="space-x-2">
@@ -216,11 +220,15 @@ export default function TriggersPage() {
               {filteredTriggers.map((t) => (
                 <div key={t.id} className="card p-4">
 
-                  <div className="flex justify-between items-center mb-2">
+                  <div className="flex justify-between mb-2">
                     <div className="font-medium">
                       {t.customers?.phone}
                     </div>
                     <TypeBadge type={t.type} />
+                  </div>
+
+                  <div className="text-xs text-gray-400 mb-2">
+                    {formatTimeAgo(t.created_at)}
                   </div>
 
                   <div className="text-sm text-gray-600 mb-2">
@@ -259,7 +267,7 @@ export default function TriggersPage() {
   );
 }
 
-/* ---------- UI ---------- */
+/* ---------- UI Components ---------- */
 
 function TypeBadge({ type }) {
   const map = {
@@ -273,4 +281,16 @@ function TypeBadge({ type }) {
       {type.replaceAll("_", " ")}
     </span>
   );
+}
+
+/* ---------- Utils ---------- */
+
+function formatTimeAgo(date) {
+  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+
+  return `${Math.floor(seconds / 86400)}d ago`;
 }
