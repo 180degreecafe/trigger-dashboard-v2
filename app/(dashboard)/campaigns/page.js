@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
-/* ---------- Constants ---------- */
+/* ---------- constants ---------- */
 
 const campaignTypes = ["Discount", "Gift", "Points"];
 
@@ -20,7 +20,12 @@ const targetAudiences = [
   "inactive_after_first",
 ];
 
-/* ---------- Page ---------- */
+const totalJobs = (c) =>
+  c?.progress
+    ? c.progress.sent + c.progress.failed + c.progress.pending
+    : 0;
+
+/* ---------- page ---------- */
 
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState([]);
@@ -44,7 +49,7 @@ export default function CampaignsPage() {
     channels: [],
   });
 
-  /* ---------- Fetch ---------- */
+  /* ---------- fetch ---------- */
 
   useEffect(() => {
     fetchCampaigns();
@@ -56,7 +61,7 @@ export default function CampaignsPage() {
     setLoading(false);
   };
 
-  /* ---------- Actions ---------- */
+  /* ---------- handlers ---------- */
 
   const handleAudienceToggle = (aud) => {
     setForm((prev) => ({
@@ -76,48 +81,35 @@ export default function CampaignsPage() {
     }));
   };
 
-  const handleCreateCampaign = async () => {
-    if (!form.name || !form.type || form.channels.length === 0) {
-      setFormError("Please fill required fields");
-      return;
+  /* ---------- target count ---------- */
+
+  const getTargetCount = async (audience) => {
+    if (!audience.length) return 0;
+
+    if (audience.includes("new")) {
+      const { data } = await supabase.rpc("count_new_customers");
+      return data || 0;
     }
 
-    const status = form.saveAsDraft ? "Draft" : "Active";
+    if (audience.includes("All customers")) {
+      const { data } = await supabase.rpc("count_latest_triggers_all");
+      return data || 0;
+    }
 
-    const { data, error } = await supabase
-      .from("campaigns")
-      .insert({
-        ...form,
-        status,
-        channel:
-          form.channels.length === 1 ? form.channels[0] : "Multiple",
-      })
-      .select()
-      .single();
-
-    if (!error) return data;
-  };
-
-  const handleSendCampaign = async (id) => {
-    setSending(true);
-
-    await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/prepare-campaign-jobs`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          campaign_id: id,
-          audience: form.audience,
-        }),
-      }
+    const { data } = await supabase.rpc(
+      "count_latest_triggers_by_type",
+      { target_types: audience }
     );
 
-    setSending(false);
+    return data || 0;
   };
+
+  useEffect(() => {
+    (async () => {
+      const count = await getTargetCount(form.audience);
+      setTargetCount(count);
+    })();
+  }, [form.audience]);
 
   /* ---------- UI ---------- */
 
@@ -147,6 +139,7 @@ export default function CampaignsPage() {
                 <th className="px-4 py-3">Name</th>
                 <th>Status</th>
                 <th>Channel</th>
+                <th>Response</th>
                 <th>Created</th>
               </tr>
             </thead>
@@ -155,8 +148,23 @@ export default function CampaignsPage() {
               {campaigns.map((c) => (
                 <tr key={c.id} className="border-b">
                   <td className="px-4 py-3 font-medium">{c.name}</td>
-                  <td>{c.status}</td>
+
+                  <td>
+                    <span
+                      className={`badge ${
+                        c.status === "Active"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }`}
+                    >
+                      {c.status}
+                    </span>
+                  </td>
+
                   <td>{c.channel}</td>
+
+                  <td>{c.response_rate ?? 0}%</td>
+
                   <td className="text-xs text-gray-400">
                     {new Date(c.created_at).toLocaleString()}
                   </td>
@@ -178,21 +186,19 @@ export default function CampaignsPage() {
               <h2 className="text-xl font-semibold">
                 {form.id ? "Edit Campaign" : "New Campaign"}
               </h2>
-              <p className="text-sm text-gray-500">
-                Create and target your campaign
-              </p>
             </div>
 
             {/* Body */}
             <div className="p-6 space-y-6 overflow-y-auto">
 
               {formError && (
-                <div className="bg-red-50 text-red-600 px-4 py-2 rounded-md text-sm">
+                <div className="text-red-600 text-sm">
                   {formError}
                 </div>
               )}
 
-              <Section title="Basics">
+              {/* basics */}
+              <div className="space-y-3">
                 <input
                   placeholder="Campaign name"
                   className="input"
@@ -207,7 +213,10 @@ export default function CampaignsPage() {
                   className="input"
                   value={form.description}
                   onChange={(e) =>
-                    setForm({ ...form, description: e.target.value })
+                    setForm({
+                      ...form,
+                      description: e.target.value,
+                    })
                   }
                 />
 
@@ -223,9 +232,11 @@ export default function CampaignsPage() {
                     <option key={t}>{t}</option>
                   ))}
                 </select>
-              </Section>
+              </div>
 
-              <Section title="Channels">
+              {/* channels */}
+              <div>
+                <div className="text-sm mb-2">Channels</div>
                 <div className="flex gap-2">
                   {["WhatsApp", "Email"].map((ch) => (
                     <button
@@ -241,9 +252,12 @@ export default function CampaignsPage() {
                     </button>
                   ))}
                 </div>
-              </Section>
+              </div>
 
-              <Section title="Audience">
+              {/* audience */}
+              <div>
+                <div className="text-sm mb-2">Audience</div>
+
                 <div className="flex flex-wrap gap-2">
                   {targetAudiences.map((aud) => (
                     <button
@@ -255,65 +269,29 @@ export default function CampaignsPage() {
                           : "badge-default"
                       }`}
                     >
-                      {aud}
+                      {aud.replaceAll("_", " ")}
                     </button>
                   ))}
                 </div>
-              </Section>
 
-              <Section title="Message">
-                <textarea
-                  className="input min-h-[120px]"
-                  value={form.message}
-                  onChange={(e) =>
-                    setForm({ ...form, message: e.target.value })
-                  }
-                />
-              </Section>
-
-              <Section title="Schedule">
-                <div className="flex gap-4">
-                  <label>
-                    <input
-                      type="radio"
-                      checked={form.sendNow}
-                      onChange={() =>
-                        setForm({ ...form, sendNow: true })
-                      }
-                    />
-                    Send now
-                  </label>
-
-                  <label>
-                    <input
-                      type="radio"
-                      checked={!form.sendNow}
-                      onChange={() =>
-                        setForm({ ...form, sendNow: false })
-                      }
-                    />
-                    Schedule
-                  </label>
+                <div className="text-xs text-gray-500 mt-2">
+                  🎯 {targetCount} customers
                 </div>
+              </div>
 
-                {!form.sendNow && (
-                  <input
-                    type="datetime-local"
-                    className="input mt-2"
-                    value={form.schedule}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        schedule: e.target.value,
-                      })
-                    }
-                  />
-                )}
-              </Section>
+              {/* message */}
+              <textarea
+                className="input min-h-[120px]"
+                placeholder="Message..."
+                value={form.message}
+                onChange={(e) =>
+                  setForm({ ...form, message: e.target.value })
+                }
+              />
 
             </div>
 
-            {/* Footer */}
+            {/* footer */}
             <div className="p-6 border-t flex justify-end gap-2">
               <button
                 onClick={() => setShowModal(false)}
@@ -322,26 +300,8 @@ export default function CampaignsPage() {
                 Cancel
               </button>
 
-              <button
-                onClick={async () => {
-                  let id = form.id;
-
-                  if (!id) {
-                    const created = await handleCreateCampaign();
-                    if (!created) return;
-                    id = created.id;
-                  }
-
-                  if (form.sendNow && !form.saveAsDraft) {
-                    await handleSendCampaign(id);
-                  }
-
-                  setShowModal(false);
-                  fetchCampaigns();
-                }}
-                className="btn-primary"
-              >
-                {sending ? "Sending..." : "Submit"}
+              <button className="btn-primary">
+                Save
               </button>
             </div>
 
@@ -352,16 +312,7 @@ export default function CampaignsPage() {
   );
 }
 
-/* ---------- UI Helpers ---------- */
-
-function Section({ title, children }) {
-  return (
-    <div>
-      <div className="text-sm font-medium mb-2">{title}</div>
-      <div className="space-y-2">{children}</div>
-    </div>
-  );
-}
+/* ---------- helpers ---------- */
 
 function getAudienceColor(type) {
   const map = {
