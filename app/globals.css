@@ -2,3 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Cards */
+.card {
+  @apply bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl;
+}
+
+/* Inputs */
+.input {
+  @apply w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900;
+}
+
+/* Buttons */
+.btn-primary {
+  @apply px-3 py-1.5 text-xs rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50;
+}
+
+.btn-secondary {
+  @apply px-3 py-1.5 text-xs rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50;
+}
+
+/* Badges */
+.badge {
+  @apply px-2 py-1 text-xs rounded-full;
+}
+
+.badge-default {
+  @apply bg-gray-100 text-gray-700;
+}
+
+.badge-active {
+  @apply bg-blue-600 text-white;
+}
+
+/* Table */
+.table-head th {
+  @apply px-4 py-3 text-left text-xs text-gray-500 uppercase;
+}
+
+.table-row td {
+  @apply px-4 py-3 border-t border-gray-100 dark:border-gray-800;
+}
