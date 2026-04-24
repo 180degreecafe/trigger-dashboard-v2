@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import dynamic from "next/dynamic";
 
-/* ---------- chart.js register (FIX CRASH) ---------- */
+/* ---------- chart.js ---------- */
 import {
   Chart as ChartJS,
   BarElement,
@@ -24,26 +24,41 @@ ChartJS.register(
   Legend
 );
 
-/* ---------- charts (no SSR) ---------- */
-const Bar = dynamic(() => import("react-chartjs-2").then((m) => m.Bar), {
-  ssr: false,
-});
+/* ---------- charts ---------- */
+const Bar = dynamic(() => import("react-chartjs-2").then((m) => m.Bar), { ssr: false });
+const Doughnut = dynamic(() => import("react-chartjs-2").then((m) => m.Doughnut), { ssr: false });
 
-const Doughnut = dynamic(
-  () => import("react-chartjs-2").then((m) => m.Doughnut),
-  { ssr: false }
-);
-
-/* ---------- helpers (ANTI-CRASH) ---------- */
+/* ---------- helpers ---------- */
 const safe = (v) => {
   const n = Number(v);
   return isFinite(n) ? n : 0;
 };
 
-/* ---------- decision engine ---------- */
+const pct = (v) => `${safe(v).toFixed(1)}%`; // ✅ لأن SQL already *100
+
+const money = (v) =>
+  new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "BHD",
+  }).format(safe(v));
+
+/* ---------- colors ---------- */
+const COLORS = [
+  "#3b82f6",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#6366f1",
+  "#f97316",
+  "#22c55e",
+  "#e11d48",
+];
+
+/* ---------- decision ---------- */
 function getDecision(t) {
   const roi = safe(t.roi);
-  const conv = safe(t.conversion_rate);
+  const conv = safe(t.conversion_rate) / 100;
 
   if (roi >= 3 && conv >= 0.2) {
     return { label: "Scale", class: "bg-green-100 text-green-700" };
@@ -54,46 +69,30 @@ function getDecision(t) {
   return { label: "Stop", class: "bg-red-100 text-red-700" };
 }
 
-/* ---------- format ---------- */
-const pct = (v) => `${Math.round(safe(v) * 100)}%`;
-
-const money = (v) =>
-  new Intl.NumberFormat("en-GB", {
-    style: "currency",
-    currency: "BHD",
-  }).format(safe(v));
-
 /* ---------- page ---------- */
 export default function TriggersPerformanceContent() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  /* ---------- fetch ---------- */
+  /* 🔥 NEW: range state */
+  const [range, setRange] = useState("30d");
+
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [range]);
 
   const fetchData = async () => {
     setLoading(true);
 
     const { data, error } = await supabase
-      .from("trigger_performance_dashboard")
+      .from(`trigger_performance_${range}`)
       .select("*")
       .order("roi", { ascending: false });
 
-    if (error) {
-      console.error("❌ fetch error:", error);
+    if (!error) {
+      setData(data || []);
     } else {
-      // ✅ CLEAN DATA (IMPORTANT)
-      const cleaned = (data || []).map((d) => ({
-        ...d,
-        roi: safe(d.roi),
-        conversion_rate: safe(d.conversion_rate),
-        total_revenue: safe(d.total_revenue),
-        profit: safe(d.profit),
-      }));
-
-      setData(cleaned);
+      console.error(error);
     }
 
     setLoading(false);
@@ -105,94 +104,115 @@ export default function TriggersPerformanceContent() {
 
     const sorted = [...data].sort((a, b) => safe(b.roi) - safe(a.roi));
 
-    const best = sorted[0];
-    const worst = sorted[sorted.length - 1];
-
-    const totalRevenue = data.reduce(
-      (s, d) => s + safe(d.total_revenue),
-      0
-    );
-
-    const avgConversion =
-      data.reduce((s, d) => s + safe(d.conversion_rate), 0) /
-      data.length;
-
-    return { best, worst, totalRevenue, avgConversion };
+    return {
+      best: sorted[0],
+      worst: sorted[sorted.length - 1],
+      totalRevenue: data.reduce((s, d) => s + safe(d.total_revenue), 0),
+      totalRedeemed: data.reduce((s, d) => s + safe(d.total_redeemed), 0),
+      avgConversion:
+        data.reduce((s, d) => s + safe(d.conversion_rate), 0) / data.length,
+    };
   }, [data]);
 
   /* ---------- charts ---------- */
-  const roiChart = useMemo(() => {
-    if (!data.length) return null;
+  const roiChart = {
+    labels: data.map((d) => d.trigger_type),
+    datasets: [
+      {
+        label: "ROI",
+        data: data.map((d) => safe(d.roi)),
+        backgroundColor: COLORS,
+        borderRadius: 6,
+      },
+    ],
+  };
 
-    return {
-      labels: data.map((d) => d.trigger_type),
-      datasets: [
-        {
-          label: "ROI",
-          data: data.map((d) => safe(d.roi)),
-        },
-      ],
-    };
-  }, [data]);
-
-  const revenueChart = useMemo(() => {
-    if (!data.length) return null;
-
-    return {
-      labels: data.map((d) => d.trigger_type),
-      datasets: [
-        {
-          data: data.map((d) => safe(d.total_revenue)),
-        },
-      ],
-    };
-  }, [data]);
+  const revenueChart = {
+    labels: data.map((d) => d.trigger_type),
+    datasets: [
+      {
+        data: data.map((d) => safe(d.total_revenue)),
+        backgroundColor: COLORS,
+      },
+    ],
+  };
 
   /* ---------- UI ---------- */
-
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
 
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">
-          Triggers Performance
-        </h1>
-        <p className="text-sm text-gray-500">
-          Optimize your marketing decisions
-        </p>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-semibold">
+            Triggers Performance
+          </h1>
+          <p className="text-sm text-gray-500">
+            Optimize marketing decisions
+          </p>
+        </div>
+
+        {/* 🔥 RANGE TOGGLE */}
+        <div className="flex gap-2">
+          {["7d", "30d", "90d"].map((r) => (
+            <button
+              key={r}
+              onClick={() => setRange(r)}
+              className={`px-3 py-1 text-sm rounded-md ${
+                range === r
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 text-gray-700"
+              }`}
+            >
+              {r.toUpperCase()}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* KPIs */}
       {!loading && kpis && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
 
-          <div className="card">
-            <div className="text-sm text-gray-500">Best Trigger</div>
+          <div className="card p-4">
+            <div className="text-xs text-gray-500 mb-1">Best Trigger</div>
             <div className="font-semibold">{kpis.best?.trigger_type}</div>
             <div className="text-green-600 text-sm">
-              ROI: {safe(kpis.best?.roi).toFixed(2)}
+              ROI {safe(kpis.best?.roi).toFixed(2)}
             </div>
           </div>
 
-          <div className="card">
-            <div className="text-sm text-gray-500">Worst Trigger</div>
+          <div className="card p-4">
+            <div className="text-xs text-gray-500 mb-1">Worst Trigger</div>
             <div className="font-semibold">{kpis.worst?.trigger_type}</div>
             <div className="text-red-600 text-sm">
-              ROI: {safe(kpis.worst?.roi).toFixed(2)}
+              ROI {safe(kpis.worst?.roi).toFixed(2)}
             </div>
           </div>
 
-          <div className="card">
-            <div className="text-sm text-gray-500">Total Revenue</div>
-            <div className="text-xl font-bold">
+          <div className="card p-4">
+            <div className="text-xs text-gray-500 mb-1">
+              Total Revenue
+            </div>
+            <div className="text-lg font-bold">
               {money(kpis.totalRevenue)}
             </div>
           </div>
 
-          <div className="card">
-            <div className="text-sm text-gray-500">Avg Conversion</div>
-            <div className="text-xl font-bold">
+          <div className="card p-4">
+            <div className="text-xs text-gray-500 mb-1">
+              Total Redeemed
+            </div>
+            <div className="text-lg font-bold">
+              {kpis.totalRedeemed}
+            </div>
+          </div>
+
+          <div className="card p-4">
+            <div className="text-xs text-gray-500 mb-1">
+              Avg Conversion
+            </div>
+            <div className="text-lg font-bold">
               {pct(kpis.avgConversion)}
             </div>
           </div>
@@ -202,18 +222,20 @@ export default function TriggersPerformanceContent() {
 
       {/* Charts */}
       {!loading && data.length > 0 && (
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
 
-          <div className="card">
-            <h3 className="text-sm font-medium mb-2">ROI by Trigger</h3>
-            {roiChart && <Bar data={roiChart} />}
+          <div className="card p-4">
+            <h3 className="text-sm font-medium mb-4">
+              ROI by Trigger
+            </h3>
+            <Bar data={roiChart} />
           </div>
 
-          <div className="card">
-            <h3 className="text-sm font-medium mb-2">
-              Revenue Contribution
+          <div className="card p-4">
+            <h3 className="text-sm font-medium mb-4">
+              Revenue Distribution
             </h3>
-            {revenueChart && <Doughnut data={revenueChart} />}
+            <Doughnut data={revenueChart} />
           </div>
 
         </div>
@@ -223,10 +245,6 @@ export default function TriggersPerformanceContent() {
       <div className="card overflow-x-auto">
         {loading ? (
           <div className="p-6 text-center">Loading...</div>
-        ) : data.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">
-            No data available
-          </div>
         ) : (
           <table className="w-full text-sm">
 
@@ -251,30 +269,19 @@ export default function TriggersPerformanceContent() {
                       {t.trigger_type}
                     </td>
 
-                    <td className="font-semibold">
-                      {safe(t.roi).toFixed(2)}
-                    </td>
-
+                    <td>{safe(t.roi).toFixed(2)}</td>
                     <td>{pct(t.conversion_rate)}</td>
 
                     <td className="text-green-600">
                       {money(t.total_revenue)}
                     </td>
 
-                    <td
-                      className={
-                        safe(t.profit) > 0
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }
-                    >
+                    <td className={safe(t.profit) > 0 ? "text-green-600" : "text-red-600"}>
                       {money(t.profit)}
                     </td>
 
                     <td>
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${decision.class}`}
-                      >
+                      <span className={`px-2 py-1 text-xs rounded-full ${decision.class}`}>
                         {decision.label}
                       </span>
                     </td>
@@ -286,28 +293,6 @@ export default function TriggersPerformanceContent() {
           </table>
         )}
       </div>
-
-      {/* Insights */}
-      {!loading && data.length > 0 && kpis && (
-        <div className="card mt-6">
-          <h3 className="text-sm font-semibold mb-2">
-            Insights
-          </h3>
-
-          <ul className="text-sm text-gray-600 space-y-1">
-            <li>
-              • {kpis.best?.trigger_type} is your most profitable trigger
-            </li>
-            <li>
-              • {kpis.worst?.trigger_type} needs review or shutdown
-            </li>
-            <li>
-              • Focus on high ROI triggers to scale revenue
-            </li>
-          </ul>
-        </div>
-      )}
-
     </div>
   );
 }
