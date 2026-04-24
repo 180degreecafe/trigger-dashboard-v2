@@ -4,34 +4,66 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import dynamic from "next/dynamic";
 
-/* ---------- charts (no SSR) ---------- */
-const Bar = dynamic(
-  () => import("react-chartjs-2").then((m) => m.Bar),
-  { ssr: false }
+/* ---------- chart.js register (FIX CRASH) ---------- */
+import {
+  Chart as ChartJS,
+  BarElement,
+  ArcElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+} from "chart.js";
+
+ChartJS.register(
+  BarElement,
+  ArcElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend
 );
+
+/* ---------- charts (no SSR) ---------- */
+const Bar = dynamic(() => import("react-chartjs-2").then((m) => m.Bar), {
+  ssr: false,
+});
+
 const Doughnut = dynamic(
   () => import("react-chartjs-2").then((m) => m.Doughnut),
   { ssr: false }
 );
 
+/* ---------- helpers (ANTI-CRASH) ---------- */
+const safe = (v) => {
+  const n = Number(v);
+  return isFinite(n) ? n : 0;
+};
+
 /* ---------- decision engine ---------- */
 function getDecision(t) {
-  if (t.roi >= 3 && t.conversion_rate >= 0.2) {
+  const roi = safe(t.roi);
+  const conv = safe(t.conversion_rate);
+
+  if (roi >= 3 && conv >= 0.2) {
     return { label: "Scale", class: "bg-green-100 text-green-700" };
   }
-  if (t.roi >= 1) {
+  if (roi >= 1) {
     return { label: "Optimize", class: "bg-yellow-100 text-yellow-700" };
   }
   return { label: "Stop", class: "bg-red-100 text-red-700" };
 }
 
-/* ---------- format helpers ---------- */
-const pct = (v) => `${Math.round((v || 0) * 100)}%`;
-const money = (v) =>
-  new Intl.NumberFormat("en-GB", { style: "currency", currency: "BHD" }).format(
-    v || 0
-  );
+/* ---------- format ---------- */
+const pct = (v) => `${Math.round(safe(v) * 100)}%`;
 
+const money = (v) =>
+  new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "BHD",
+  }).format(safe(v));
+
+/* ---------- page ---------- */
 export default function TriggersPerformanceContent() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -50,9 +82,18 @@ export default function TriggersPerformanceContent() {
       .order("roi", { ascending: false });
 
     if (error) {
-      console.error(error);
+      console.error("❌ fetch error:", error);
     } else {
-      setData(data || []);
+      // ✅ CLEAN DATA (IMPORTANT)
+      const cleaned = (data || []).map((d) => ({
+        ...d,
+        roi: safe(d.roi),
+        conversion_rate: safe(d.conversion_rate),
+        total_revenue: safe(d.total_revenue),
+        profit: safe(d.profit),
+      }));
+
+      setData(cleaned);
     }
 
     setLoading(false);
@@ -60,13 +101,21 @@ export default function TriggersPerformanceContent() {
 
   /* ---------- KPIs ---------- */
   const kpis = useMemo(() => {
-    if (!data.length) return {};
+    if (!data.length) return null;
 
-    const best = [...data].sort((a, b) => b.roi - a.roi)[0];
-    const worst = [...data].sort((a, b) => a.roi - b.roi)[0];
-    const totalRevenue = data.reduce((s, d) => s + (d.total_revenue || 0), 0);
+    const sorted = [...data].sort((a, b) => safe(b.roi) - safe(a.roi));
+
+    const best = sorted[0];
+    const worst = sorted[sorted.length - 1];
+
+    const totalRevenue = data.reduce(
+      (s, d) => s + safe(d.total_revenue),
+      0
+    );
+
     const avgConversion =
-      data.reduce((s, d) => s + (d.conversion_rate || 0), 0) / data.length;
+      data.reduce((s, d) => s + safe(d.conversion_rate), 0) /
+      data.length;
 
     return { best, worst, totalRevenue, avgConversion };
   }, [data]);
@@ -80,7 +129,7 @@ export default function TriggersPerformanceContent() {
       datasets: [
         {
           label: "ROI",
-          data: data.map((d) => d.roi),
+          data: data.map((d) => safe(d.roi)),
         },
       ],
     };
@@ -93,7 +142,7 @@ export default function TriggersPerformanceContent() {
       labels: data.map((d) => d.trigger_type),
       datasets: [
         {
-          data: data.map((d) => d.total_revenue),
+          data: data.map((d) => safe(d.total_revenue)),
         },
       ],
     };
@@ -115,14 +164,14 @@ export default function TriggersPerformanceContent() {
       </div>
 
       {/* KPIs */}
-      {!loading && (
+      {!loading && kpis && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
 
           <div className="card">
             <div className="text-sm text-gray-500">Best Trigger</div>
             <div className="font-semibold">{kpis.best?.trigger_type}</div>
             <div className="text-green-600 text-sm">
-              ROI: {kpis.best?.roi?.toFixed(2)}
+              ROI: {safe(kpis.best?.roi).toFixed(2)}
             </div>
           </div>
 
@@ -130,7 +179,7 @@ export default function TriggersPerformanceContent() {
             <div className="text-sm text-gray-500">Worst Trigger</div>
             <div className="font-semibold">{kpis.worst?.trigger_type}</div>
             <div className="text-red-600 text-sm">
-              ROI: {kpis.worst?.roi?.toFixed(2)}
+              ROI: {safe(kpis.worst?.roi).toFixed(2)}
             </div>
           </div>
 
@@ -152,7 +201,7 @@ export default function TriggersPerformanceContent() {
       )}
 
       {/* Charts */}
-      {!loading && (
+      {!loading && data.length > 0 && (
         <div className="grid md:grid-cols-2 gap-6 mb-6">
 
           <div className="card">
@@ -174,6 +223,10 @@ export default function TriggersPerformanceContent() {
       <div className="card overflow-x-auto">
         {loading ? (
           <div className="p-6 text-center">Loading...</div>
+        ) : data.length === 0 ? (
+          <div className="p-6 text-center text-gray-500">
+            No data available
+          </div>
         ) : (
           <table className="w-full text-sm">
 
@@ -199,7 +252,7 @@ export default function TriggersPerformanceContent() {
                     </td>
 
                     <td className="font-semibold">
-                      {t.roi?.toFixed(2)}
+                      {safe(t.roi).toFixed(2)}
                     </td>
 
                     <td>{pct(t.conversion_rate)}</td>
@@ -210,7 +263,7 @@ export default function TriggersPerformanceContent() {
 
                     <td
                       className={
-                        t.profit > 0
+                        safe(t.profit) > 0
                           ? "text-green-600"
                           : "text-red-600"
                       }
@@ -235,7 +288,7 @@ export default function TriggersPerformanceContent() {
       </div>
 
       {/* Insights */}
-      {!loading && data.length > 0 && (
+      {!loading && data.length > 0 && kpis && (
         <div className="card mt-6">
           <h3 className="text-sm font-semibold mb-2">
             Insights
