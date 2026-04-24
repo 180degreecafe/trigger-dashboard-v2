@@ -45,7 +45,7 @@ export default function TriggersPerformanceContent() {
     setLoading(true);
 
     const { data, error } = await supabase
-      .from("trigger_performance_view")
+      .from("trigger_performance_dashboard")
       .select("*")
       .order("roi", { ascending: false });
 
