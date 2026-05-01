@@ -6,69 +6,38 @@ import { supabase } from "@/lib/supabaseClient";
 export default function Header() {
   const [user, setUser] = useState(null);
   const [notifications, setNotifications] = useState([]);
-  const [open, setOpen] = useState(false);
+  const [openUser, setOpenUser] = useState(false);
+  const [openNotif, setOpenNotif] = useState(false);
 
-  /* ---------- fetch user ---------- */
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
     });
   }, []);
 
-  /* ---------- fetch notifications ---------- */
-  useEffect(() => {
-    fetchNotifications();
-
-    const channel = supabase
-      .channel("realtime:notifications")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notifications" },
-        (payload) => {
-          setNotifications((prev) => [payload.new, ...prev]);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const fetchNotifications = async () => {
-    const { data } = await supabase
-      .from("notifications")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(10);
-
-    setNotifications(data || []);
-  };
-
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-  /* ---------- logout ---------- */
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = "/signin";
+
+    // 🔥 مهم جداً
+    window.location.replace("/signin");
   };
 
   return (
-    <div className="h-14 bg-white border-b flex items-center justify-between px-6">
+    <div className="h-14 bg-[var(--card)] border-b border-[var(--border)] flex items-center justify-between px-6">
 
-      {/* Left */}
-      <div className="font-semibold text-gray-800">
+      <div className="font-semibold text-[var(--text)]">
         180° Dashboard
       </div>
 
-      {/* Right */}
       <div className="flex items-center gap-4">
 
         {/* 🔔 Notifications */}
         <div className="relative">
           <button
-            onClick={() => setOpen(!open)}
-            className="relative p-2 rounded hover:bg-gray-100"
+            onClick={() => setOpenNotif(!openNotif)}
+            className="relative p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
           >
             🔔
 
@@ -79,54 +48,46 @@ export default function Header() {
             )}
           </button>
 
-          {/* Dropdown */}
-          {open && (
-            <div className="absolute right-0 mt-2 w-80 bg-white border rounded-lg shadow-lg z-50">
-
-              <div className="p-3 border-b text-sm font-medium">
+          {openNotif && (
+            <div className="absolute right-0 mt-2 w-80 bg-[var(--card)] border border-[var(--border)] rounded-lg shadow z-50">
+              <div className="p-3 text-sm text-[var(--text)] border-b">
                 Notifications
               </div>
-
-              <div className="max-h-80 overflow-y-auto">
-                {notifications.map((n) => (
-                  <a
-                    key={n.id}
-                    href={n.link || "#"}
-                    className="block px-4 py-3 text-sm hover:bg-gray-50 border-b"
-                  >
-                    {n.message}
-                  </a>
-                ))}
-              </div>
-
             </div>
           )}
         </div>
 
         {/* 👤 User */}
-        <div className="relative group">
-          <div className="flex items-center gap-2 cursor-pointer">
-
-            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm">
+        <div className="relative">
+          <button
+            onClick={() => setOpenUser(!openUser)}
+            className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+          >
+            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm text-black">
               {user?.email?.[0]?.toUpperCase()}
             </div>
 
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-[var(--text)]">
               {user?.email}
             </span>
-          </div>
+          </button>
 
-          {/* Dropdown */}
-          <div className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow opacity-0 group-hover:opacity-100 transition">
+          {openUser && (
+            <div className="absolute right-0 mt-2 w-44 bg-[var(--card)] border border-[var(--border)] rounded-lg shadow z-50">
 
-            <button
-              onClick={handleLogout}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-            >
-              Logout
-            </button>
+              <div className="px-4 py-3 text-sm text-[var(--muted)] border-b">
+                {user?.email}
+              </div>
 
-          </div>
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-4 py-2 text-sm text-[var(--text)] hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                Logout
+              </button>
+
+            </div>
+          )}
         </div>
 
       </div>
