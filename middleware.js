@@ -21,33 +21,42 @@ export async function middleware(req) {
   );
 
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  const path = req.nextUrl.pathname;
+  const pathname = req.nextUrl.pathname;
 
   /* ---------- public ---------- */
-  if (path.startsWith("/points")) return res;
-
-  /* ---------- signin ---------- */
-  if (path.startsWith("/signin")) {
-    if (user) {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
-    }
-    return res;
-  }
+  if (pathname.startsWith("/points")) return res;
 
   /* ---------- protected ---------- */
-  if (!user) {
-    const url = new URL("/signin", req.url);
-    url.searchParams.set("redirect", path);
-    return NextResponse.redirect(url);
+  const protectedRoutes = [
+    "/dashboard",
+    "/campaigns",
+    "/triggers",
+    "/actions",
+    "/notifications",
+  ];
+
+  const isProtected = protectedRoutes.some((p) =>
+    pathname.startsWith(p)
+  );
+
+  /* ---------- redirect unauth ---------- */
+  if (isProtected && !session) {
+    return NextResponse.redirect(new URL("/signin", req.url));
+  }
+
+  /* ---------- prevent signin access ---------- */
+  if (pathname === "/signin" && session) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
   return res;
 }
 
-/* 🔥 يشمل كل الصفحات */
 export const config = {
-  matcher: ["/((?!_next|favicon.ico|points|signin).*)"],
+  matcher: [
+    "/((?!_next|favicon.ico|points).*)",
+  ],
 };
