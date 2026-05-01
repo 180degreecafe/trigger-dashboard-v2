@@ -1,66 +1,42 @@
-"use client";
+import { NextResponse } from "next/server";
+import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
 
-import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import { useRouter } from "next/navigation";
+export async function middleware(req) {
+  const res = NextResponse.next();
 
-export default function SignIn() {
-  const router = useRouter();
+  const supabase = createMiddlewareClient({ req, res });
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const handleLogin = async () => {
-    setLoading(true);
-    setMessage("");
+  const path = req.nextUrl.pathname;
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  /* ---------- PUBLIC ---------- */
+  if (path.startsWith("/points")) return res;
 
-    if (error) {
-      setMessage("Login failed ❌");
-      console.error(error.message);
-      setLoading(false);
-      return;
+  /* ---------- SIGNIN ---------- */
+  if (path.startsWith("/signin")) {
+    if (user) {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
     }
+    return res;
+  }
 
-    setMessage("Logged in ✅");
+  /* ---------- PROTECTED ---------- */
+  if (!user) {
+    return NextResponse.redirect(new URL("/signin", req.url));
+  }
 
-    // 🚀 تحويل مباشر بعد تسجيل الدخول
-    router.push("/dashboard");
-  };
-
-  return (
-    <div style={{ padding: 20 }}>
-      <h1>Login</h1>
-
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-
-      <br /><br />
-
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
-
-      <br /><br />
-
-      <button onClick={handleLogin} disabled={loading}>
-        {loading ? "Loading..." : "Login"}
-      </button>
-
-      <p>{message}</p>
-    </div>
-  );
+  return res;
 }
+
+export const config = {
+  matcher: [
+    "/dashboard/:path*",
+    "/triggers/:path*",
+    "/actions/:path*",
+    "/campaigns/:path*",
+    "/notifications/:path*",
+  ],
+};
