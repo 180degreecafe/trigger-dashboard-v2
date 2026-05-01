@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 export default function SignInPage() {
@@ -8,6 +9,11 @@ export default function SignInPage() {
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
+
+  const searchParams = useSearchParams();
+
+  // 🔥 الصفحة الأصلية
+  const redirectTo = searchParams.get("redirectTo") || "/dashboard";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,11 +39,10 @@ export default function SignInPage() {
 
     setMessage("✅ Logged in, redirecting...");
 
-    // 🔥 أهم سطر (يخلي الكوكيز تتحدث قبل redirect)
     await supabase.auth.getSession();
 
-    // 🔥 redirect مضمون
-    window.location.href = "/dashboard";
+    // 🔥 يرجعك لنفس الصفحة اللي طلبتها
+    window.location.href = redirectTo;
   };
 
   return (
