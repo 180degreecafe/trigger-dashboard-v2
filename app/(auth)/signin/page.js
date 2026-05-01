@@ -1,12 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 export default function SignInPage() {
-  const router = useRouter();
-
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -24,32 +21,32 @@ export default function SignInPage() {
     setMessage("");
 
     const { error } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim(),
       password,
     });
 
-    setLoading(false);
-
     if (error) {
-      setMessage("❌ Invalid credentials");
-    } else {
-      setMessage("✅ Logged in");
-
-      // 🔥 نفس منهجيتك القديمة
-      setTimeout(() => {
-        router.refresh(); // مهم
-        router.push("/dashboard");
-      }, 1000);
+      setMessage("❌ Invalid email or password");
+      setLoading(false);
+      return;
     }
+
+    setMessage("✅ Logged in, redirecting...");
+
+    // 🔥 أهم سطر (يخلي الكوكيز تتحدث قبل redirect)
+    await supabase.auth.getSession();
+
+    // 🔥 redirect مضمون
+    window.location.href = "/dashboard";
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full bg-white p-8 rounded-lg shadow">
+      <div className="w-full max-w-md bg-white rounded-xl shadow p-8">
 
-        <h2 className="text-xl font-bold mb-6 text-center">
+        <h1 className="text-xl font-semibold text-center mb-6">
           Sign in
-        </h2>
+        </h1>
 
         {message && (
           <div className="text-sm text-center mb-4">
@@ -62,21 +59,20 @@ export default function SignInPage() {
           <input
             type="email"
             placeholder="Email"
+            className="w-full border px-3 py-2 rounded text-black"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 border rounded text-black"
           />
 
           <input
             type="password"
             placeholder="Password"
+            className="w-full border px-3 py-2 rounded text-black"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2 border rounded text-black"
           />
 
           <button
-            type="submit"
             disabled={loading}
             className="w-full bg-black text-white py-2 rounded"
           >
