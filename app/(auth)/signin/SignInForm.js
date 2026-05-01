@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useSearchParams } from "next/navigation";
 
@@ -13,6 +13,20 @@ export default function SignInForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  /* ✅ هذا هو الحل الحقيقي */
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN") {
+        // 🔥 هذا يضمن إن الكوكي جاهز
+        window.location.href = redirect;
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [redirect]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -31,14 +45,8 @@ export default function SignInForm() {
       return;
     }
 
-    // ✅ رسالة نجاح
     setSuccess(true);
-
-    // ✅ ننتظر تثبيت الكوكي
-    await new Promise((res) => setTimeout(res, 500));
-
-    // 🔥 redirect صحيح
-    window.location.replace(redirect);
+    setLoading(false);
   };
 
   return (
@@ -46,7 +54,6 @@ export default function SignInForm() {
 
       <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border p-8">
 
-        {/* Header */}
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-semibold">Sign in</h1>
           <p className="text-sm text-gray-500">
@@ -54,21 +61,18 @@ export default function SignInForm() {
           </p>
         </div>
 
-        {/* Error */}
         {error && (
           <div className="text-red-500 text-sm text-center mb-4">
             {error}
           </div>
         )}
 
-        {/* Success */}
         {success && (
           <div className="text-green-600 text-sm text-center mb-4">
             Login successful... redirecting
           </div>
         )}
 
-        {/* Form */}
         <form onSubmit={handleLogin} className="space-y-4">
 
           <input
@@ -98,11 +102,6 @@ export default function SignInForm() {
           </button>
 
         </form>
-
-        {/* Footer */}
-        <div className="mt-6 text-center text-xs text-gray-400">
-          © 180° system
-        </div>
 
       </div>
     </div>
