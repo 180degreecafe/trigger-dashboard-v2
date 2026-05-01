@@ -55,10 +55,6 @@ export async function middleware(req) {
 
 export const config = {
   matcher: [
-    "/dashboard/:path*",
-    "/triggers/:path*",
-    "/actions/:path*",
-    "/campaigns/:path*",
-    "/notifications/:path*",
+    "/((?!signin|points|_next|favicon.ico).*)",
   ],
 };
