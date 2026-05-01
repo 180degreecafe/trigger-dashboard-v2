@@ -25,7 +25,7 @@ export default function Home() {
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Connected to Supabase ✅</h1>
+      <h1>Connected to Supabase! ✅</h1>
 
       {data.map((item) => (
         <p key={item.id}>{item.phone}</p>
