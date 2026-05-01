@@ -5,9 +5,9 @@ import { supabase } from "@/lib/supabaseClient";
 
 export default function Header() {
   const [user, setUser] = useState(null);
-  const [notifications, setNotifications] = useState([]);
   const [openUser, setOpenUser] = useState(false);
   const [openNotif, setOpenNotif] = useState(false);
+  const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -19,77 +19,88 @@ export default function Header() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-
-    // 🔥 مهم جداً
     window.location.replace("/signin");
   };
 
   return (
-    <div className="h-14 bg-[var(--card)] border-b border-[var(--border)] flex items-center justify-between px-6">
+    <div className="border-b bg-white dark:bg-gray-900">
 
-      <div className="font-semibold text-[var(--text)]">
-        180° Dashboard
-      </div>
+      <div className="max-w-7xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between">
 
-      <div className="flex items-center gap-4">
+        {/* Title */}
+        <div className="font-semibold">
+          Dashboard
+        </div>
 
-        {/* 🔔 Notifications */}
-        <div className="relative">
-          <button
-            onClick={() => setOpenNotif(!openNotif)}
-            className="relative p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-          >
-            🔔
+        {/* Right */}
+        <div className="flex items-center gap-3">
 
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 text-xs bg-red-500 text-white rounded-full px-1.5">
-                {unreadCount}
-              </span>
+          {/* 🔔 Notifications */}
+          <div className="relative">
+            <button
+              onClick={() => setOpenNotif(!openNotif)}
+              className="badge badge-default"
+            >
+              🔔 {unreadCount > 0 && `(${unreadCount})`}
+            </button>
+
+            {openNotif && (
+              <div className="card absolute right-0 mt-2 w-80 z-50">
+
+                <div className="p-3 border-b text-sm font-medium">
+                  Notifications
+                </div>
+
+                <div className="max-h-80 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="p-4 text-sm text-gray-500">
+                      No notifications
+                    </div>
+                  ) : (
+                    notifications.map((n) => (
+                      <a
+                        key={n.id}
+                        href={n.link || "#"}
+                        className="block p-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+                      >
+                        {n.message}
+                      </a>
+                    ))
+                  )}
+                </div>
+
+              </div>
             )}
-          </button>
+          </div>
 
-          {openNotif && (
-            <div className="absolute right-0 mt-2 w-80 bg-[var(--card)] border border-[var(--border)] rounded-lg shadow z-50">
-              <div className="p-3 text-sm text-[var(--text)] border-b">
-                Notifications
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 👤 User */}
-        <div className="relative">
-          <button
-            onClick={() => setOpenUser(!openUser)}
-            className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-          >
-            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm text-black">
-              {user?.email?.[0]?.toUpperCase()}
-            </div>
-
-            <span className="text-sm text-[var(--text)]">
+          {/* 👤 User */}
+          <div className="relative">
+            <button
+              onClick={() => setOpenUser(!openUser)}
+              className="badge badge-default"
+            >
               {user?.email}
-            </span>
-          </button>
+            </button>
 
-          {openUser && (
-            <div className="absolute right-0 mt-2 w-44 bg-[var(--card)] border border-[var(--border)] rounded-lg shadow z-50">
+            {openUser && (
+              <div className="card absolute right-0 mt-2 w-44 z-50">
 
-              <div className="px-4 py-3 text-sm text-[var(--muted)] border-b">
-                {user?.email}
+                <div className="p-3 text-xs text-gray-500 border-b">
+                  {user?.email}
+                </div>
+
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left p-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
+                  Logout
+                </button>
+
               </div>
+            )}
+          </div>
 
-              <button
-                onClick={handleLogout}
-                className="w-full text-left px-4 py-2 text-sm text-[var(--text)] hover:bg-gray-100 dark:hover:bg-gray-800"
-              >
-                Logout
-              </button>
-
-            </div>
-          )}
         </div>
-
       </div>
     </div>
   );
