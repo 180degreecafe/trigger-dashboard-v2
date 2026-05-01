@@ -26,10 +26,10 @@ export async function middleware(req) {
 
   const path = req.nextUrl.pathname;
 
-  // public
+  /* ---------- public ---------- */
   if (path.startsWith("/points")) return res;
 
-  // signin
+  /* ---------- signin ---------- */
   if (path.startsWith("/signin")) {
     if (user) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
@@ -37,7 +37,7 @@ export async function middleware(req) {
     return res;
   }
 
-  // protected
+  /* ---------- protected ---------- */
   if (!user) {
     const url = new URL("/signin", req.url);
     url.searchParams.set("redirect", path);
@@ -47,8 +47,7 @@ export async function middleware(req) {
   return res;
 }
 
+/* 🔥 يشمل كل الصفحات */
 export const config = {
-  matcher: [
-    "/((?!_next|favicon.ico|points|signin).*)",
-  ],
+  matcher: ["/((?!_next|favicon.ico|points|signin).*)"],
 };
