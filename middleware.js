@@ -20,9 +20,10 @@ export async function middleware(req) {
     }
   );
 
+  // 🔥 التعديل هنا
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const pathname = req.nextUrl.pathname;
 
@@ -43,12 +44,12 @@ export async function middleware(req) {
   );
 
   /* ---------- redirect unauth ---------- */
-  if (isProtected && !session) {
+  if (isProtected && !user) {
     return NextResponse.redirect(new URL("/signin", req.url));
   }
 
   /* ---------- prevent signin access ---------- */
-  if (pathname === "/signin" && session) {
+  if (pathname === "/signin" && user) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
