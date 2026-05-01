@@ -28,10 +28,12 @@ export default function SignInPage() {
 
     setMessage("✅ Login successful");
 
-    // ✅ نفس منطقك القديم (مهم جداً)
-    setTimeout(() => {
-      window.location.href = "/dashboard";
-    }, 800);
+    // 🔥 أهم سطرين (الحل الحقيقي)
+    await supabase.auth.getSession();
+    await supabase.auth.refreshSession();
+
+    // 🔥 full reload
+    window.location.href = "/dashboard";
   };
 
   return (
@@ -44,7 +46,7 @@ export default function SignInPage() {
         </h1>
 
         {message && (
-          <div className="text-center text-sm mb-4 text-gray-600">
+          <div className="text-center text-sm mb-4">
             {message}
           </div>
         )}
@@ -56,7 +58,6 @@ export default function SignInPage() {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            required
             className="w-full border px-3 py-2 rounded text-black"
           />
 
@@ -65,7 +66,6 @@ export default function SignInPage() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            required
             className="w-full border px-3 py-2 rounded text-black"
           />
 
