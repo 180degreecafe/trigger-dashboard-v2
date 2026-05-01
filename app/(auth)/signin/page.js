@@ -1,9 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { useRouter } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
 
 export default function SignInPage() {
+  const router = useRouter();
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,37 +24,35 @@ export default function SignInPage() {
     setMessage("");
 
     const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
+      email,
       password,
     });
 
+    setLoading(false);
+
     if (error) {
-      setMessage("❌ Invalid email or password");
-      setLoading(false);
-      return;
+      setMessage("❌ Invalid credentials");
+    } else {
+      setMessage("✅ Logged in");
+
+      // 🔥 نفس منهجيتك القديمة
+      setTimeout(() => {
+        router.refresh(); // مهم
+        router.push("/dashboard");
+      }, 1000);
     }
-
-    setMessage("✅ Login successful");
-
-    // 🔥 أهم سطرين (الحل الحقيقي)
-    await supabase.auth.getSession();
-    await supabase.auth.refreshSession();
-
-    // 🔥 full reload
-    window.location.href = "/dashboard";
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="max-w-md w-full bg-white p-8 rounded-lg shadow">
 
-      <div className="w-full max-w-md bg-white rounded-2xl shadow border p-8">
-
-        <h1 className="text-xl font-semibold text-center mb-6">
+        <h2 className="text-xl font-bold mb-6 text-center">
           Sign in
-        </h1>
+        </h2>
 
         {message && (
-          <div className="text-center text-sm mb-4">
+          <div className="text-sm text-center mb-4">
             {message}
           </div>
         )}
@@ -58,7 +64,7 @@ export default function SignInPage() {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full border px-3 py-2 rounded text-black"
+            className="w-full px-4 py-2 border rounded text-black"
           />
 
           <input
@@ -66,7 +72,7 @@ export default function SignInPage() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full border px-3 py-2 rounded text-black"
+            className="w-full px-4 py-2 border rounded text-black"
           />
 
           <button
@@ -74,7 +80,7 @@ export default function SignInPage() {
             disabled={loading}
             className="w-full bg-black text-white py-2 rounded"
           >
-            {loading ? "Signing in..." : "Sign in"}
+            {loading ? "Loading..." : "Login"}
           </button>
 
         </form>
