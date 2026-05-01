@@ -30,16 +30,17 @@ export async function middleware(req) {
     }
   );
 
+  // 🔑 جلب الجلسة
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
   const path = req.nextUrl.pathname;
 
-  /* ---------- PUBLIC ---------- */
+  /* ---------- PUBLIC ROUTES ---------- */
   if (path.startsWith("/points")) return res;
 
-  /* ---------- SIGNIN ---------- */
+  /* ---------- SIGNIN PAGE ---------- */
   if (path.startsWith("/signin")) {
     if (session) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
@@ -47,7 +48,7 @@ export async function middleware(req) {
     return res;
   }
 
-  /* ---------- PROTECTED ---------- */
+  /* ---------- PROTECTED ROUTES ---------- */
   const protectedRoutes = [
     "/dashboard",
     "/campaigns",
@@ -56,17 +57,25 @@ export async function middleware(req) {
     "/notifications",
   ];
 
-  const isProtected = protectedRoutes.some((p) =>
-    path.startsWith(p)
+  const isProtected = protectedRoutes.some((route) =>
+    path.startsWith(route)
   );
 
+  // 🔥 إذا غير مسجل دخول
   if (isProtected && !session) {
-    return NextResponse.redirect(new URL("/signin", req.url));
+    const redirectUrl = req.nextUrl.clone();
+    redirectUrl.pathname = "/signin";
+
+    // 🔥 نحفظ الصفحة المطلوبة
+    redirectUrl.searchParams.set("redirectTo", path);
+
+    return NextResponse.redirect(redirectUrl);
   }
 
   return res;
 }
 
+/* ---------- MATCHER ---------- */
 export const config = {
   matcher: [
     "/((?!_next|favicon.ico|api|points).*)",
