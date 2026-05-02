@@ -1,50 +1,97 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useRouter } from "next/navigation";
 
 export default function Header() {
+  const router = useRouter();
+
   const [user, setUser] = useState(null);
-  const [openUser, setOpenUser] = useState(false);
-  const [openNotif, setOpenNotif] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
+  const notifRef = useRef(null);
+  const userRef = useRef(null);
+
+  /* ---------- get user ---------- */
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
+      setUser(data?.user || null);
     });
   }, []);
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  /* ---------- fetch notifications ---------- */
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase
+        .from("notifications")
+        .select("id, message, created_at, link, is_read")
+        .order("created_at", { ascending: false })
+        .limit(10);
 
+      setNotifications(data || []);
+    };
+
+    fetch();
+  }, []);
+
+  /* ---------- close on outside click ---------- */
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (
+        !notifRef.current?.contains(e.target) &&
+        !userRef.current?.contains(e.target)
+      ) {
+        setNotifOpen(false);
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  /* ---------- logout ---------- */
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.replace("/signin");
+
+    // 🔥 مهم جداً: reload كامل عشان middleware يشتغل
+    window.location.href = "/signin";
   };
 
+  /* ---------- unread ---------- */
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
   return (
-    <div className="border-b bg-white dark:bg-gray-900">
+    <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between">
 
         {/* Title */}
-        <div className="font-semibold">
-          Dashboard
-        </div>
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+          180° Dashboard
+        </h1>
 
-        {/* Right */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4 relative">
 
           {/* 🔔 Notifications */}
-          <div className="relative">
+          <div ref={notifRef} className="relative">
+
             <button
-              onClick={() => setOpenNotif(!openNotif)}
-              className="badge badge-default"
+              onClick={() => setNotifOpen(!notifOpen)}
+              className="relative text-lg"
             >
-              🔔 {unreadCount > 0 && `(${unreadCount})`}
+              🔔
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-2 text-xs bg-red-500 text-white rounded-full px-1.5">
+                  {unreadCount}
+                </span>
+              )}
             </button>
 
-            {openNotif && (
+            {notifOpen && (
               <div className="card absolute right-0 mt-2 w-80 z-50">
 
                 <div className="p-3 border-b text-sm font-medium">
@@ -58,13 +105,19 @@ export default function Header() {
                     </div>
                   ) : (
                     notifications.map((n) => (
-                      <a
+                      <div
                         key={n.id}
-                        href={n.link || "#"}
-                        className="block p-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+                        onClick={() => {
+                          if (n.link) router.push(n.link);
+                          setNotifOpen(false);
+                        }}
+                        className="p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
                       >
-                        {n.message}
-                      </a>
+                        <p className="text-sm">{n.message}</p>
+                        <p className="text-xs text-gray-400">
+                          {new Date(n.created_at).toLocaleString()}
+                        </p>
+                      </div>
                     ))
                   )}
                 </div>
@@ -74,24 +127,25 @@ export default function Header() {
           </div>
 
           {/* 👤 User */}
-          <div className="relative">
+          <div ref={userRef} className="relative">
+
             <button
-              onClick={() => setOpenUser(!openUser)}
-              className="badge badge-default"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="text-sm font-medium"
             >
-              {user?.email}
+              👤 {user?.email || "User"}
             </button>
 
-            {openUser && (
-              <div className="card absolute right-0 mt-2 w-44 z-50">
+            {dropdownOpen && (
+              <div className="card absolute right-0 mt-2 w-56 z-50 p-3 space-y-2">
 
-                <div className="p-3 text-xs text-gray-500 border-b">
+                <div className="text-xs text-gray-500">
                   {user?.email}
                 </div>
 
                 <button
                   onClick={handleLogout}
-                  className="w-full text-left p-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+                  className="w-full text-left text-sm text-red-500 hover:underline"
                 >
                   Logout
                 </button>
