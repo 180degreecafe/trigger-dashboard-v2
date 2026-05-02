@@ -10,33 +10,47 @@ export default function DashboardLayout({ children }) {
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
 
-      {/* ✅ Desktop Sidebar (ثابت) */}
+      {/* ---------- Desktop Sidebar ---------- */}
       <div className="hidden md:flex">
         <Sidebar />
       </div>
 
-      {/* ✅ Mobile Drawer */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-50 flex">
+      {/* ---------- Mobile Drawer ---------- */}
+      <div
+        className={`
+          fixed inset-0 z-50 md:hidden
+          ${mobileOpen ? "pointer-events-auto" : "pointer-events-none"}
+        `}
+      >
+        {/* Overlay */}
+        <div
+          onClick={() => setMobileOpen(false)}
+          className={`
+            absolute inset-0 bg-black/40 transition-opacity duration-300
+            ${mobileOpen ? "opacity-100" : "opacity-0"}
+          `}
+        />
 
-          {/* Sidebar (LEFT) */}
-          <div className="w-64 h-full bg-white dark:bg-gray-900 shadow-xl">
-            <Sidebar />
-          </div>
-
-          {/* Overlay */}
-          <div
-            className="flex-1 bg-black/40"
-            onClick={() => setMobileOpen(false)}
-          />
+        {/* Sidebar (slide from LEFT) */}
+        <div
+          className={`
+            absolute left-0 top-0 h-full w-64
+            bg-white dark:bg-gray-900 shadow-xl
+            transform transition-transform duration-300
+            ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
+          `}
+        >
+          <Sidebar onNavigate={() => setMobileOpen(false)} />
         </div>
-      )}
+      </div>
 
-      {/* ✅ Main */}
+      {/* ---------- Main ---------- */}
       <div className="flex-1 flex flex-col min-w-0">
 
+        {/* Header */}
         <Header onMenuClick={() => setMobileOpen(true)} />
 
+        {/* Content */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
           {children}
         </main>
