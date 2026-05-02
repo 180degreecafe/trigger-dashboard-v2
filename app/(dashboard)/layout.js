@@ -51,7 +51,7 @@ export default function DashboardLayout({ children }) {
         <Header onMenuClick={() => setMobileOpen(true)} />
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto px-3 py-3 md:px-4 md:py-4">
+        <main className="flex-1 overflow-y-auto px-6 md:px-8 py-6">
           {children}
         </main>
 
