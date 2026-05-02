@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -8,11 +7,8 @@ import {
   Megaphone,
   Bell,
   Activity,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 
-/* ---------- NAV ---------- */
 const nav = [
   {
     label: "Overview",
@@ -36,61 +32,23 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const [collapsed, setCollapsed] = useState(false);
-
-  /* ---------- LOAD ---------- */
-  useEffect(() => {
-    const saved = localStorage.getItem("sidebar");
-    if (saved) setCollapsed(saved === "true");
-  }, []);
-
-  /* ---------- SAVE ---------- */
-  useEffect(() => {
-    localStorage.setItem("sidebar", collapsed);
-  }, [collapsed]);
-
-  const handleNavigate = (href) => {
-    router.push(href);
-  };
-
   return (
-    <div
-      className={`
-        h-screen flex flex-col
-        bg-white dark:bg-gray-900
-        border-r border-gray-200 dark:border-gray-800
-        transition-all duration-300
-        ${collapsed ? "w-16" : "w-64"}
-      `}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 h-14 border-b border-gray-200 dark:border-gray-800">
+    <div className="h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
 
-        {!collapsed && (
-          <span className="font-semibold text-gray-900 dark:text-white">
-            180°
-          </span>
-        )}
-
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-        >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-        </button>
+      {/* Logo */}
+      <div className="h-14 flex items-center px-4 border-b border-gray-200 dark:border-gray-800 font-semibold">
+        180°
       </div>
 
-      {/* Navigation */}
-      <div className="p-2 space-y-6 overflow-y-auto">
+      {/* Nav */}
+      <div className="p-3 space-y-6 overflow-y-auto">
 
         {nav.map((section) => (
           <div key={section.label}>
 
-            {!collapsed && (
-              <div className="text-xs text-gray-400 mb-2 px-2">
-                {section.label}
-              </div>
-            )}
+            <div className="text-xs text-gray-400 mb-2 px-2">
+              {section.label}
+            </div>
 
             <div className="space-y-1">
               {section.items.map((item) => {
@@ -100,10 +58,8 @@ export default function Sidebar() {
                 return (
                   <button
                     key={item.name}
-                    onClick={() => handleNavigate(item.href)}
-                    className={`
-                      w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm
-                      transition-colors
+                    onClick={() => router.push(item.href)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition
                       ${
                         active
                           ? "bg-black text-white"
@@ -112,10 +68,7 @@ export default function Sidebar() {
                     `}
                   >
                     <Icon size={18} />
-
-                    {!collapsed && (
-                      <span className="truncate">{item.name}</span>
-                    )}
+                    <span>{item.name}</span>
                   </button>
                 );
               })}
