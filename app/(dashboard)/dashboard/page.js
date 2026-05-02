@@ -83,7 +83,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-6 min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-white">
+    <div className="space-y-6 dark:bg-gray-900 text-gray-800 dark:text-white">
 
       <h1 className="text-3xl font-bold mb-6">
         📊 Dashboard
