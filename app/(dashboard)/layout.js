@@ -8,10 +8,10 @@ export default function DashboardLayout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
 
       {/* ---------- Desktop Sidebar ---------- */}
-      <div className="hidden md:flex">
+      <div className="hidden md:block w-64 flex-shrink-0">
         <Sidebar />
       </div>
 
@@ -31,7 +31,7 @@ export default function DashboardLayout({ children }) {
           `}
         />
 
-        {/* Sidebar (slide from LEFT) */}
+        {/* Sidebar */}
         <div
           className={`
             absolute left-0 top-0 h-full w-64
@@ -52,9 +52,12 @@ export default function DashboardLayout({ children }) {
 
         {/* Content */}
         <main className="flex-1 overflow-y-auto">
-          <div className="px-4 md:px-6 py-4 max-w-none">
+
+          {/* 🔥 هذا هو الحل الحقيقي */}
+          <div className="px-4 md:px-6 py-4">
             {children}
           </div>
+
         </main>
 
       </div>
