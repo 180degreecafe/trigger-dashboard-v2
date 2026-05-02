@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 
-export default function Header() {
+export default function Header({ onMenuClick }) {
   const router = useRouter();
 
   const [user, setUser] = useState(null);
@@ -15,14 +15,14 @@ export default function Header() {
   const notifRef = useRef(null);
   const userRef = useRef(null);
 
-  /* ---------- get user ---------- */
+  /* ---------- user ---------- */
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data?.user || null);
     });
   }, []);
 
-  /* ---------- fetch notifications ---------- */
+  /* ---------- notifications ---------- */
   useEffect(() => {
     const fetch = async () => {
       const { data } = await supabase
@@ -37,7 +37,7 @@ export default function Header() {
     fetch();
   }, []);
 
-  /* ---------- close on outside click ---------- */
+  /* ---------- close outside ---------- */
   useEffect(() => {
     const handleClick = (e) => {
       if (
@@ -56,27 +56,37 @@ export default function Header() {
   /* ---------- logout ---------- */
   const handleLogout = async () => {
     await supabase.auth.signOut();
-
-    // 🔥 مهم جداً: reload كامل عشان middleware يشتغل
     window.location.href = "/signin";
   };
 
-  /* ---------- unread ---------- */
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const unread = notifications.filter((n) => !n.is_read).length;
 
   return (
     <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between">
 
-        {/* Title */}
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-          180° Dashboard
-        </h1>
+        {/* LEFT */}
+        <div className="flex items-center gap-3">
 
+          {/* Mobile Menu */}
+          <button
+            onClick={onMenuClick}
+            className="md:hidden p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+          >
+            ☰
+          </button>
+
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Dashboard
+          </h1>
+
+        </div>
+
+        {/* RIGHT */}
         <div className="flex items-center gap-4 relative">
 
-          {/* 🔔 Notifications */}
+          {/* Notifications */}
           <div ref={notifRef} className="relative">
 
             <button
@@ -84,9 +94,9 @@ export default function Header() {
               className="relative text-lg"
             >
               🔔
-              {unreadCount > 0 && (
+              {unread > 0 && (
                 <span className="absolute -top-1 -right-2 text-xs bg-red-500 text-white rounded-full px-1.5">
-                  {unreadCount}
+                  {unread}
                 </span>
               )}
             </button>
@@ -126,7 +136,7 @@ export default function Header() {
             )}
           </div>
 
-          {/* 👤 User */}
+          {/* User */}
           <div ref={userRef} className="relative">
 
             <button
