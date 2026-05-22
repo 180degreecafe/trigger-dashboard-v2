@@ -8,11 +8,9 @@ export default function SpinWheelPage() {
   // STATES
   // =====================================================
 
-  const [phone, setPhone] =
-    useState("");
+  const [phone, setPhone] = useState("");
 
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [selectedReward, setSelectedReward] =
     useState(null);
@@ -24,17 +22,12 @@ export default function SpinWheelPage() {
   // REFS
   // =====================================================
 
-  const canvasRef =
-    useRef(null);
+  const canvasRef = useRef(null);
 
-  const spinSoundRef =
-    useRef(null);
-
-  const spinningRef =
-    useRef(false);
+  const spinningRef = useRef(false);
 
   // =====================================================
-  // VISUAL ONLY PRIZES
+  // VISUAL ONLY
   // =====================================================
 
   const prizes = [
@@ -47,6 +40,48 @@ export default function SpinWheelPage() {
     "🎯",
     "🥳",
   ];
+
+  // =====================================================
+  // SOUND
+  // =====================================================
+
+  const playSpinSound = () => {
+
+    try {
+
+      const audio =
+        new Audio("/spin-wheel-sound.mp3");
+
+      audio.volume = 0.5;
+
+      audio.loop = true;
+
+      audio.play().catch((err) => {
+
+        console.log(
+          "🔇 SOUND BLOCKED"
+        );
+
+        console.log(err);
+      });
+
+      console.log(
+        "🔊 SOUND STARTED"
+      );
+
+      return audio;
+
+    } catch (err) {
+
+      console.log(
+        "❌ AUDIO ERROR"
+      );
+
+      console.log(err);
+
+      return null;
+    }
+  };
 
   // =====================================================
   // DRAW WHEEL
@@ -124,8 +159,6 @@ export default function SpinWheelPage() {
 
       ctx.fill();
 
-      // border
-
       ctx.lineWidth = 3;
 
       ctx.strokeStyle =
@@ -133,7 +166,7 @@ export default function SpinWheelPage() {
 
       ctx.stroke();
 
-      // text
+      // TEXT
 
       ctx.save();
 
@@ -209,8 +242,7 @@ export default function SpinWheelPage() {
   // START SPIN
   // =====================================================
 
-  const startSpin =
-    async () => {
+  const startSpin = async () => {
 
     console.log(
       "🎯 START SPIN"
@@ -222,51 +254,25 @@ export default function SpinWheelPage() {
       return;
     }
 
-    spinningRef.current =
-      true;
+    spinningRef.current = true;
 
     setLoading(true);
 
     setResult(null);
 
-    setSelectedReward(
-      null
-    );
+    setSelectedReward(null);
+
+    // ==========================================
+    // SOUND
+    // ==========================================
+
+    const sound =
+      playSpinSound();
 
     try {
 
       // ==========================================
-      // PLAY SOUND FIRST
-      // ==========================================
-
-      if (
-        spinSoundRef.current
-      ) {
-
-        try {
-
-          spinSoundRef.current.currentTime = 0;
-
-          spinSoundRef.current.loop = true;
-
-          await spinSoundRef.current.play();
-
-          console.log(
-            "🔊 Sound playing"
-          );
-
-        } catch (err) {
-
-          console.log(
-            "🔇 Sound blocked"
-          );
-
-          console.log(err);
-        }
-      }
-
-      // ==========================================
-      // RANDOM VISUAL SEGMENT
+      // VISUAL ONLY
       // ==========================================
 
       const visualIndex =
@@ -276,16 +282,16 @@ export default function SpinWheelPage() {
         );
 
       console.log(
-        "🎡 Visual Index:",
+        "🎡 VISUAL INDEX:",
         visualIndex
       );
 
       // ==========================================
-      // CALL BACKEND
+      // BACKEND
       // ==========================================
 
       console.log(
-        "📡 Calling spin-wheel..."
+        "📡 CALLING SPIN-WHEEL..."
       );
 
       const spinRes =
@@ -302,7 +308,7 @@ export default function SpinWheelPage() {
         );
 
       console.log(
-        "📥 Status:",
+        "📥 STATUS:",
         spinRes.status
       );
 
@@ -315,52 +321,29 @@ export default function SpinWheelPage() {
 
       console.log(rawText);
 
-      let spinData;
-
-      try {
-
-        spinData =
-          JSON.parse(rawText);
-
-      } catch (err) {
-
-        console.error(
-          "❌ JSON PARSE ERROR"
-        );
-
-        console.error(err);
-
-        alert(
-          "Invalid JSON"
-        );
-
-        spinningRef.current = false;
-
-        setLoading(false);
-
-        return;
-      }
+      const spinData =
+        JSON.parse(rawText);
 
       console.log(
-        "✅ Parsed JSON:"
+        "✅ PARSED:"
       );
 
-      console.log(
-        spinData
-      );
+      console.log(spinData);
 
-      if (
-        !spinRes.ok
-      ) {
+      if (!spinRes.ok) {
 
         alert(
           spinData.error ||
           "Spin Error"
         );
 
+        setLoading(false);
+
         spinningRef.current = false;
 
-        setLoading(false);
+        if (sound) {
+          sound.pause();
+        }
 
         return;
       }
@@ -379,7 +362,7 @@ export default function SpinWheelPage() {
       });
 
       console.log(
-        "🏆 Backend Reward:"
+        "🏆 REWARD:"
       );
 
       console.log(
@@ -387,7 +370,7 @@ export default function SpinWheelPage() {
       );
 
       // ==========================================
-      // SPIN ANGLE
+      // ANGLES
       // ==========================================
 
       const anglePerPrize =
@@ -415,7 +398,10 @@ export default function SpinWheelPage() {
         + targetAngle;
 
       console.log(
-        "🛑 Stop Angle:",
+        "🛑 STOP ANGLE:"
+      );
+
+      console.log(
         stopAngle
       );
 
@@ -423,8 +409,7 @@ export default function SpinWheelPage() {
       // ANIMATION
       // ==========================================
 
-      const duration =
-        5000;
+      const duration = 5000;
 
       const start =
         performance.now();
@@ -440,8 +425,6 @@ export default function SpinWheelPage() {
             elapsed / duration,
             1
           );
-
-        // easing
 
         const eased =
           1 -
@@ -468,18 +451,14 @@ export default function SpinWheelPage() {
         } else {
 
           console.log(
-            "✅ Spin finished"
+            "✅ FINISHED"
           );
 
-          if (
-            spinSoundRef.current
-          ) {
-
-            spinSoundRef.current.pause();
+          if (sound) {
+            sound.pause();
           }
 
-          spinningRef.current =
-            false;
+          spinningRef.current = false;
 
           setLoading(false);
         }
@@ -491,18 +470,21 @@ export default function SpinWheelPage() {
 
     } catch (err) {
 
-      console.error(
+      console.log(
         "🔥 NETWORK ERROR"
       );
 
-      console.error(err);
+      console.log(err);
+
+      if (sound) {
+        sound.pause();
+      }
 
       alert(
         "Network Error"
       );
 
-      spinningRef.current =
-        false;
+      spinningRef.current = false;
 
       setLoading(false);
     }
@@ -512,8 +494,7 @@ export default function SpinWheelPage() {
   // SEND REWARD
   // =====================================================
 
-  const sendReward =
-    async () => {
+  const sendReward = async () => {
 
     console.log(
       "📲 SEND REWARD"
@@ -532,9 +513,7 @@ export default function SpinWheelPage() {
       return;
     }
 
-    if (
-      !selectedReward
-    ) {
+    if (!selectedReward) {
 
       alert(
         "لا توجد جائزة"
@@ -573,12 +552,19 @@ export default function SpinWheelPage() {
         );
 
       console.log(
-        "📥 Claim Status:",
+        "📥 CLAIM STATUS:"
+      );
+
+      console.log(
         res.status
       );
 
       const rawText =
         await res.text();
+
+      console.log(
+        "📦 CLAIM RAW:"
+      );
 
       console.log(
         rawText
@@ -588,6 +574,10 @@ export default function SpinWheelPage() {
         JSON.parse(
           rawText
         );
+
+      console.log(
+        "✅ CLAIM:"
+      );
 
       console.log(
         data
@@ -608,6 +598,10 @@ export default function SpinWheelPage() {
       setResult(data);
 
     } catch (err) {
+
+      console.log(
+        "🔥 CLAIM ERROR"
+      );
 
       console.log(err);
 
@@ -640,16 +634,6 @@ export default function SpinWheelPage() {
       "
     >
 
-      {/* AUDIO */}
-
-      <audio
-        ref={spinSoundRef}
-        src="/spin-wheel-sound.mp3"
-        preload="auto"
-      />
-
-      {/* TITLE */}
-
       <h1
         className="
           text-4xl
@@ -675,8 +659,6 @@ export default function SpinWheelPage() {
             shadow-2xl
           "
         />
-
-        {/* CENTER BUTTON */}
 
         <button
           onClick={startSpin}
