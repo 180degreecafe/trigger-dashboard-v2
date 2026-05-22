@@ -2,38 +2,48 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const rewards = [
-  "20% خصم",
-  "30% خصم",
-  "اشتر 1 واحصل 1",
-  "20 نقطة اضافية",
-  "بن قهوة من اختيارك",
-  "شنطة V60",
-  "جهاز اسبريسو",
-  "حظاً أوفر",
-];
-
 export default function SpinWheelPage() {
 
-  const canvasRef = useRef(null);
-
-  const audioRef = useRef(null);
-
-  const spinningRef = useRef(false);
+  // =====================================================
+  // STATES
+  // =====================================================
 
   const [phone, setPhone] = useState("");
-
-  const [rotation, setRotation] = useState(0);
 
   const [loading, setLoading] = useState(false);
 
   const [result, setResult] = useState(null);
 
   // =====================================================
+  // REFS
+  // =====================================================
+
+  const canvasRef = useRef(null);
+
+  const spinSoundRef = useRef(null);
+
+  const spinningRef = useRef(false);
+
+  // =====================================================
+  // PRIZES
+  // =====================================================
+
+  const prizes = [
+    "حظاً أوفر",
+    "20% خصم",
+    "30% خصم",
+    "اشتر 1 واحصل 1 مجان",
+    "20 نقطة اضافية",
+    "بن قهوة من اختيارك",
+    "شنطة V60",
+    "جهاز اسبريسو",
+  ];
+
+  // =====================================================
   // DRAW WHEEL
   // =====================================================
 
-  const drawWheel = (rot = 0) => {
+  const drawWheel = (rotation = 0) => {
 
     const canvas = canvasRef.current;
 
@@ -41,83 +51,75 @@ export default function SpinWheelPage() {
 
     const ctx = canvas.getContext("2d");
 
-    const size = canvas.width;
+    const centerX = canvas.width / 2;
 
-    const center = size / 2;
+    const centerY = canvas.height / 2;
 
-    const radius = 150;
+    const radius = 180;
 
-    const slice = (2 * Math.PI) / rewards.length;
+    const angle = (2 * Math.PI) / prizes.length;
 
-    ctx.clearRect(0, 0, size, size);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
 
-    ctx.translate(center, center);
+    ctx.translate(centerX, centerY);
 
-    ctx.rotate(rot);
+    ctx.rotate(rotation);
 
-    rewards.forEach((reward, i) => {
+    for (let i = 0; i < prizes.length; i++) {
 
-      const start = i * slice;
+      const start = i * angle;
 
-      const end = start + slice;
+      const end = start + angle;
+
+      const color =
+        `hsl(${i * 360 / prizes.length}, 70%, 60%)`;
 
       ctx.beginPath();
+
+      ctx.fillStyle = color;
 
       ctx.moveTo(0, 0);
 
       ctx.arc(0, 0, radius, start, end);
 
-      ctx.fillStyle = `hsl(${i * 45}, 85%, 60%)`;
-
       ctx.fill();
+
+      // text
 
       ctx.save();
 
-      ctx.rotate(start + slice / 2);
+      ctx.rotate(start + angle / 2);
 
-      ctx.translate(radius * 0.68, 0);
+      ctx.translate(radius * 0.65, 0);
 
       ctx.rotate(Math.PI / 2);
 
       ctx.fillStyle = "#fff";
 
-      ctx.font = "bold 15px Arial";
+      ctx.font = "bold 14px Arial";
 
       ctx.textAlign = "center";
 
-      ctx.fillText(reward, 0, 0);
+      ctx.fillText(prizes[i], 0, 0);
 
       ctx.restore();
-
-    });
+    }
 
     ctx.restore();
-
-    // outer border
-
-    ctx.beginPath();
-
-    ctx.arc(center, center, radius, 0, Math.PI * 2);
-
-    ctx.lineWidth = 8;
-
-    ctx.strokeStyle = "#111";
-
-    ctx.stroke();
 
     // pointer
 
     ctx.beginPath();
 
-    ctx.moveTo(center - 16, 8);
+    ctx.moveTo(centerX - 12, centerY - radius - 10);
 
-    ctx.lineTo(center + 16, 8);
+    ctx.lineTo(centerX + 12, centerY - radius - 10);
 
-    ctx.lineTo(center, 42);
+    ctx.lineTo(centerX, centerY - radius + 15);
 
-    ctx.fillStyle = "#111";
+    ctx.fillStyle = "#ef4444";
 
     ctx.fill();
   };
@@ -128,22 +130,24 @@ export default function SpinWheelPage() {
 
   useEffect(() => {
 
-    drawWheel(rotation);
+    drawWheel();
 
-  }, [rotation]);
+  }, []);
 
   // =====================================================
-  // SPIN
+  // START SPIN
   // =====================================================
 
-  const handleSpin = async () => {
-
-    if (!phone.trim()) {
-      alert("أدخل رقم الجوال");
-      return;
-    }
+  const startSpin = async () => {
 
     if (spinningRef.current) return;
+
+    if (!phone.trim()) {
+
+      alert("أدخل رقم الجوال");
+
+      return;
+    }
 
     spinningRef.current = true;
 
@@ -151,13 +155,11 @@ export default function SpinWheelPage() {
 
     setResult(null);
 
-    audioRef.current?.play();
-
     try {
 
-      // =========================================
+      // ==========================================
       // 1. GET REWARD
-      // =========================================
+      // ==========================================
 
       const spinRes = await fetch(
         "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/spin-wheel",
@@ -185,74 +187,59 @@ export default function SpinWheelPage() {
 
       const reward = spinData.reward;
 
-      // =========================================
-      // 2. FIND SEGMENT
-      // =========================================
+      // ==========================================
+      // 2. DETERMINE STOP ANGLE
+      // ==========================================
 
-      const index = rewards.findIndex(
-        (r) => r === reward
-      );
-
-      if (index === -1) {
-
-        alert("Reward mismatch");
-
-        spinningRef.current = false;
-
-        setLoading(false);
-
-        return;
-      }
-
-      // =========================================
-      // 3. SPIN ANIMATION
-      // =========================================
-
-      const sliceAngle =
-        (2 * Math.PI) / rewards.length;
-
-      const targetRotation =
-        (Math.PI * 2 * 7) +
-        ((Math.PI * 1.5) -
-          (index * sliceAngle + sliceAngle / 2));
-
-      const startRotation = rotation;
-
-      const duration = 5500;
-
-      const startTime = performance.now();
-
-      function animate(now) {
-
-        const elapsed = now - startTime;
-
-        const progress = Math.min(
-          elapsed / duration,
-          1
+      const prizeIndex =
+        prizes.findIndex(
+          (p) => p === reward
         );
 
-        // easeOutCubic
+      const anglePerPrize =
+        (2 * Math.PI) / prizes.length;
 
-        const ease =
-          1 - Math.pow(1 - progress, 3);
+      const stopAngle =
+        (3 * Math.PI / 2) -
+        (
+          prizeIndex * anglePerPrize +
+          anglePerPrize / 2
+        );
 
-        const current =
-          startRotation +
-          (targetRotation - startRotation) * ease;
+      // ==========================================
+      // 3. START ANIMATION
+      // ==========================================
 
-        setRotation(current);
+      let current = 0;
 
-        if (progress < 1) {
+      let speed = 0.35;
 
-          requestAnimationFrame(animate);
+      spinSoundRef.current.currentTime = 0;
+
+      spinSoundRef.current.play();
+
+      const spin = setInterval(() => {
+
+        current += speed;
+
+        drawWheel(current);
+
+        if (speed > 0.002) {
+
+          speed *= 0.985;
 
         } else {
 
+          clearInterval(spin);
+
+          drawWheel(stopAngle);
+
+          spinSoundRef.current.pause();
+
           finishClaim(reward);
         }
-      }
 
-      requestAnimationFrame(animate);
+      }, 16);
 
     } catch (err) {
 
@@ -274,7 +261,7 @@ export default function SpinWheelPage() {
 
     try {
 
-      const claimRes = await fetch(
+      const res = await fetch(
         "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/claim-reward",
         {
           method: "POST",
@@ -290,32 +277,28 @@ export default function SpinWheelPage() {
         }
       );
 
-      const claimData = await claimRes.json();
+      const data = await res.json();
 
-      if (!claimData.success) {
+      if (data.success) {
 
-        alert(
-          claimData.error || "Claim failed"
-        );
+        setResult(data);
 
       } else {
 
-        setResult(claimData);
+        alert(data.error || "Claim failed");
       }
 
     } catch (err) {
 
       console.error(err);
 
-      alert("Claim Error");
+      alert("حدث خطأ");
 
     } finally {
 
       spinningRef.current = false;
 
       setLoading(false);
-
-      audioRef.current?.pause();
     }
   };
 
@@ -328,9 +311,7 @@ export default function SpinWheelPage() {
       dir="rtl"
       className="
         min-h-screen
-        bg-gradient-to-b
-        from-yellow-50
-        to-orange-100
+        bg-gray-100
         flex
         flex-col
         items-center
@@ -340,20 +321,15 @@ export default function SpinWheelPage() {
       "
     >
 
-      {/* audio */}
-
       <audio
-        ref={audioRef}
-        src="/spin-wheel.mp3"
+        ref={spinSoundRef}
+        src="/spin-wheel-sound.mp3"
         preload="auto"
       />
 
-      {/* title */}
-
       <h1 className="
         text-4xl
-        md:text-5xl
-        font-black
+        font-bold
         mb-8
       ">
         🎉 عجلة الحظ 🎉
@@ -365,35 +341,37 @@ export default function SpinWheelPage() {
 
         <canvas
           ref={canvasRef}
-          width={340}
-          height={340}
+          width={400}
+          height={400}
           className="
-            drop-shadow-2xl
+            bg-white
+            rounded-full
+            shadow-xl
           "
         />
 
-        {/* center */}
+        {/* center button */}
 
         <button
+          onClick={startSpin}
           disabled={loading}
-          onClick={handleSpin}
           className="
             absolute
-            inset-0
-            m-auto
-            w-24
-            h-24
-            rounded-full
+            top-1/2
+            left-1/2
+            -translate-x-1/2
+            -translate-y-1/2
             bg-black
             text-white
-            font-black
+            rounded-full
+            w-20
+            h-20
+            font-bold
             text-xl
-            shadow-xl
-            hover:scale-105
-            transition
+            shadow-lg
           "
         >
-          {loading ? "..." : "SPIN"}
+          {loading ? "..." : "180"}
         </button>
 
       </div>
@@ -402,24 +380,22 @@ export default function SpinWheelPage() {
 
       <input
         type="tel"
-        placeholder="رقم الجوال"
+        placeholder="أدخل رقم الجوال"
         value={phone}
         onChange={(e) =>
           setPhone(e.target.value)
         }
         className="
           mt-8
-          border-2
-          border-black/10
-          rounded-2xl
+          border
+          border-gray-300
+          rounded-xl
           p-4
           text-center
           text-lg
           w-full
           max-w-sm
           bg-white
-          shadow
-          outline-none
         "
       />
 
@@ -430,45 +406,44 @@ export default function SpinWheelPage() {
         <div className="
           mt-8
           bg-white
-          rounded-3xl
-          shadow-xl
           p-6
-          w-full
-          max-w-md
+          rounded-2xl
+          shadow-lg
           text-center
+          max-w-md
+          w-full
         ">
 
-          <div className="text-6xl mb-4">
+          <div className="text-5xl mb-3">
             🎁
           </div>
 
           <h2 className="
-            text-3xl
-            font-black
+            text-2xl
+            font-bold
           ">
             {result.reward}
           </h2>
 
-          <p className="
-            mt-3
-            text-gray-500
-          ">
-            تم إرسال الجائزة عبر الواتساب 📲
-          </p>
-
           {result.coupon_code && (
 
             <div className="
-              mt-5
+              mt-4
               text-3xl
               font-mono
-              font-black
-              tracking-widest
+              font-bold
             ">
               {result.coupon_code}
             </div>
 
           )}
+
+          <p className="
+            mt-4
+            text-gray-500
+          ">
+            تم إرسال الجائزة عبر الواتساب 📲
+          </p>
 
         </div>
 
