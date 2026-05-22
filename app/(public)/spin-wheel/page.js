@@ -142,7 +142,14 @@ export default function SpinWheelPage() {
 
   const startSpin = async () => {
 
-    if (spinningRef.current) return;
+    console.log("🎯 START SPIN");
+
+    if (spinningRef.current) {
+
+      console.log("⛔ Already spinning");
+
+      return;
+    }
 
     spinningRef.current = true;
 
@@ -154,9 +161,7 @@ export default function SpinWheelPage() {
 
     try {
 
-      // ==========================================
-      // GET REWARD
-      // ==========================================
+      console.log("📡 Calling spin-wheel function...");
 
       const spinRes = await fetch(
         "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/spin-wheel",
@@ -169,11 +174,56 @@ export default function SpinWheelPage() {
         }
       );
 
-      const spinData = await spinRes.json();
+      console.log("📥 Status:", spinRes.status);
+
+      const rawText = await spinRes.text();
+
+      console.log("📦 RAW RESPONSE:");
+      console.log(rawText);
+
+      let spinData;
+
+      try {
+
+        spinData = JSON.parse(rawText);
+
+        console.log("✅ Parsed JSON:");
+        console.log(spinData);
+
+      } catch (jsonErr) {
+
+        console.error("❌ JSON PARSE ERROR");
+        console.error(jsonErr);
+
+        alert("الدالة لم ترجع JSON صحيح");
+
+        spinningRef.current = false;
+
+        setLoading(false);
+
+        return;
+      }
+
+      if (!spinRes.ok) {
+
+        console.error("❌ HTTP ERROR");
+        console.error(spinData);
+
+        alert(spinData.error || "Server Error");
+
+        spinningRef.current = false;
+
+        setLoading(false);
+
+        return;
+      }
 
       if (!spinData.success) {
 
-        alert("فشل في اختيار الجائزة");
+        console.error("❌ FUNCTION ERROR");
+        console.error(spinData);
+
+        alert(spinData.error || "Spin Failed");
 
         spinningRef.current = false;
 
@@ -184,6 +234,8 @@ export default function SpinWheelPage() {
 
       const reward = spinData.reward;
 
+      console.log("🏆 Selected Reward:", reward);
+
       // ==========================================
       // FIND SEGMENT
       // ==========================================
@@ -192,6 +244,8 @@ export default function SpinWheelPage() {
         prizes.findIndex(
           (p) => p === reward
         );
+
+      console.log("🎡 Prize Index:", prizeIndex);
 
       const anglePerPrize =
         (2 * Math.PI) / prizes.length;
@@ -203,6 +257,8 @@ export default function SpinWheelPage() {
           anglePerPrize / 2
         );
 
+      console.log("🛑 Stop Angle:", stopAngle);
+
       // ==========================================
       // ANIMATION
       // ==========================================
@@ -213,9 +269,15 @@ export default function SpinWheelPage() {
 
       if (spinSoundRef.current) {
 
+        console.log("🔊 Playing sound");
+
         spinSoundRef.current.currentTime = 0;
 
-        spinSoundRef.current.play();
+        spinSoundRef.current.play()
+          .catch((e) => {
+            console.error("🔇 Sound play error");
+            console.error(e);
+          });
       }
 
       const spin = setInterval(() => {
@@ -231,6 +293,8 @@ export default function SpinWheelPage() {
         } else {
 
           clearInterval(spin);
+
+          console.log("✅ Spin finished");
 
           drawWheel(stopAngle);
 
@@ -249,6 +313,7 @@ export default function SpinWheelPage() {
 
     } catch (err) {
 
+      console.error("🔥 NETWORK ERROR");
       console.error(err);
 
       alert("Network Error");
@@ -265,6 +330,8 @@ export default function SpinWheelPage() {
 
   const sendReward = async () => {
 
+    console.log("📲 SEND REWARD");
+
     if (!phone.trim()) {
 
       alert("أدخل رقم الجوال");
@@ -275,6 +342,8 @@ export default function SpinWheelPage() {
     try {
 
       setLoading(true);
+
+      console.log("📡 Calling claim-reward");
 
       const res = await fetch(
         "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/claim-reward",
@@ -292,7 +361,44 @@ export default function SpinWheelPage() {
         }
       );
 
-      const data = await res.json();
+      console.log("📥 Claim Status:", res.status);
+
+      const rawText = await res.text();
+
+      console.log("📦 CLAIM RAW RESPONSE:");
+      console.log(rawText);
+
+      let data;
+
+      try {
+
+        data = JSON.parse(rawText);
+
+      } catch (jsonErr) {
+
+        console.error("❌ CLAIM JSON ERROR");
+        console.error(jsonErr);
+
+        alert("الدالة لم ترجع JSON");
+
+        setLoading(false);
+
+        return;
+      }
+
+      console.log("✅ CLAIM RESPONSE:");
+      console.log(data);
+
+      if (!res.ok) {
+
+        console.error("❌ CLAIM HTTP ERROR");
+
+        alert(data.error || "Claim Error");
+
+        setLoading(false);
+
+        return;
+      }
 
       if (data.success) {
 
@@ -300,13 +406,12 @@ export default function SpinWheelPage() {
 
       } else {
 
-        alert(
-          data.error || "حدث خطأ"
-        );
+        alert(data.error || "حدث خطأ");
       }
 
     } catch (err) {
 
+      console.error("🔥 CLAIM NETWORK ERROR");
       console.error(err);
 
       alert("Network Error");
@@ -336,7 +441,7 @@ export default function SpinWheelPage() {
       "
     >
 
-      {/* audio */}
+      {/* AUDIO */}
 
       <audio
         ref={spinSoundRef}
@@ -344,7 +449,7 @@ export default function SpinWheelPage() {
         preload="auto"
       />
 
-      {/* title */}
+      {/* TITLE */}
 
       <h1 className="
         text-4xl
@@ -354,7 +459,7 @@ export default function SpinWheelPage() {
         🎉 عجلة الحظ 🎉
       </h1>
 
-      {/* wheel */}
+      {/* WHEEL */}
 
       <div className="relative">
 
@@ -369,7 +474,7 @@ export default function SpinWheelPage() {
           "
         />
 
-        {/* center button */}
+        {/* BUTTON */}
 
         <button
           onClick={startSpin}
@@ -390,12 +495,12 @@ export default function SpinWheelPage() {
             shadow-lg
           "
         >
-          {loading ? "..." : "180"}
+          {loading ? "..." : "SPIN"}
         </button>
 
       </div>
 
-      {/* reward result */}
+      {/* REWARD FORM */}
 
       {selectedReward && !result && (
 
@@ -422,8 +527,6 @@ export default function SpinWheelPage() {
             {selectedReward}
           </h2>
 
-          {/* phone */}
-
           <input
             type="tel"
             placeholder="أدخل رقم الجوال"
@@ -442,8 +545,6 @@ export default function SpinWheelPage() {
               bg-white
             "
           />
-
-          {/* send button */}
 
           <button
             onClick={sendReward}
@@ -467,7 +568,7 @@ export default function SpinWheelPage() {
 
       )}
 
-      {/* final result */}
+      {/* FINAL RESULT */}
 
       {result && (
 
