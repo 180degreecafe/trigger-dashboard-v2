@@ -4,26 +4,51 @@ import { useState } from "react";
 
 export default function RedeemRewardPage() {
 
-  const [coupon, setCoupon] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const [result, setResult] = useState(null);
-
-  const [error, setError] = useState("");
-
   // =====================================================
-  // REDEEM
+  // STATES
   // =====================================================
 
-  const handleRedeem = async () => {
+  const [couponCode, setCouponCode] =
+    useState("");
 
-    if (!coupon) return;
+  const [loading, setLoading] =
+    useState(false);
 
-    setLoading(true);
-    setError("");
-    setResult(null);
+  const [rewardData, setRewardData] =
+    useState(null);
+
+  const [error, setError] =
+    useState("");
+
+  const [success, setSuccess] =
+    useState("");
+
+  // =====================================================
+  // CHECK CODE
+  // =====================================================
+
+  const checkCode = async () => {
+
+    console.log("🔍 CHECK CODE");
+
+    console.log(couponCode);
+
+    if (!couponCode.trim()) {
+
+      setError("أدخل الكود");
+
+      return;
+    }
 
     try {
+
+      setLoading(true);
+
+      setError("");
+
+      setSuccess("");
+
+      setRewardData(null);
 
       const res = await fetch(
         "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/redeem-reward",
@@ -31,36 +56,175 @@ export default function RedeemRewardPage() {
           method: "POST",
 
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type":
+              "application/json",
           },
 
           body: JSON.stringify({
-            coupon_code: coupon
+            coupon_code: couponCode,
+            action: "check",
           }),
         }
       );
 
-      const data = await res.json();
+      console.log(
+        "📥 STATUS:",
+        res.status
+      );
 
-      if (data.success) {
+      const rawText =
+        await res.text();
 
-        setResult(data);
+      console.log(
+        "📦 RAW RESPONSE:"
+      );
 
-      } else {
+      console.log(rawText);
 
-        setError(
-          data.error || "فشل استخدام الكوبون"
-        );
+      let data;
 
+      try {
+
+        data =
+          JSON.parse(rawText);
+
+      } catch (err) {
+
+        console.log(err);
+
+        setError("Invalid JSON");
+
+        setLoading(false);
+
+        return;
       }
 
-    } catch {
+      console.log(data);
 
-      setError("حدث خطأ أثناء الاتصال بالخادم");
+      if (!res.ok) {
 
+        setError(
+          data.error ||
+          "حدث خطأ"
+        );
+
+        setLoading(false);
+
+        return;
+      }
+
+      setRewardData(data);
+
+    } catch (err) {
+
+      console.log(err);
+
+      setError("Network Error");
+
+    } finally {
+
+      setLoading(false);
     }
+  };
 
-    setLoading(false);
+  // =====================================================
+  // REDEEM
+  // =====================================================
+
+  const redeemCode = async () => {
+
+    console.log("✅ REDEEM CODE");
+
+    try {
+
+      setLoading(true);
+
+      setError("");
+
+      setSuccess("");
+
+      const res = await fetch(
+        "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/redeem-reward",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+            coupon_code: couponCode,
+            action: "redeem",
+          }),
+        }
+      );
+
+      console.log(
+        "📥 STATUS:",
+        res.status
+      );
+
+      const rawText =
+        await res.text();
+
+      console.log(
+        "📦 RAW RESPONSE:"
+      );
+
+      console.log(rawText);
+
+      let data;
+
+      try {
+
+        data =
+          JSON.parse(rawText);
+
+      } catch (err) {
+
+        console.log(err);
+
+        setError("Invalid JSON");
+
+        setLoading(false);
+
+        return;
+      }
+
+      console.log(data);
+
+      if (!res.ok) {
+
+        setError(
+          data.error ||
+          "حدث خطأ"
+        );
+
+        setLoading(false);
+
+        return;
+      }
+
+      setSuccess(
+        "✅ تم استخدام الكوبون بنجاح"
+      );
+
+      setRewardData({
+        ...rewardData,
+        redeemed: true,
+      });
+
+    } catch (err) {
+
+      console.log(err);
+
+      setError("Network Error");
+
+    } finally {
+
+      setLoading(false);
+    }
   };
 
   // =====================================================
@@ -72,136 +236,204 @@ export default function RedeemRewardPage() {
       dir="rtl"
       className="
         min-h-screen
+        bg-gray-100
         flex
         items-center
         justify-center
-        bg-gray-100
         px-4
       "
     >
 
-      {/* Forced light mode */}
-      <div className="
-        bg-white
-        text-gray-900
-        dark:bg-white
-        dark:text-gray-900
-        shadow-lg
-        rounded-2xl
-        p-6
-        max-w-md
-        w-full
-        text-center
-        space-y-4
-      ">
+      <div
+        className="
+          bg-white
+          shadow-xl
+          rounded-2xl
+          p-6
+          w-full
+          max-w-md
+        "
+      >
 
-        {/* Title */}
-        <h1 className="text-3xl font-bold">
+        {/* TITLE */}
+
+        <h1
+          className="
+            text-3xl
+            font-bold
+            text-center
+            text-black
+            mb-6
+          "
+        >
           🎟️ Redeem Reward
         </h1>
 
-        <p className="text-gray-500">
-          أدخل كود الجائزة
-        </p>
+        {/* INPUT */}
 
-        {/* Input */}
         <input
           type="text"
-          placeholder="180-4821"
-          value={coupon}
+
+          placeholder="أدخل الكود"
+
+          value={couponCode}
+
           onChange={(e) =>
-            setCoupon(e.target.value)
+            setCouponCode(
+              e.target.value
+            )
           }
+
           className="
             border
             border-gray-300
+            rounded-xl
             p-4
             w-full
-            rounded-xl
             text-center
-            text-xl
-            font-semibold
-            tracking-wider
-            text-gray-900
+            text-2xl
+            tracking-widest
             bg-white
-            focus:outline-none
-            focus:ring-2
-            focus:ring-black
+            text-black
+            placeholder:text-gray-400
           "
         />
 
-        {/* Button */}
+        {/* BUTTON */}
+
         <button
-          onClick={handleRedeem}
+          onClick={checkCode}
+
+          disabled={loading}
+
           className="
+            mt-4
             bg-black
-            hover:bg-gray-800
             text-white
-            py-3
-            px-4
             rounded-xl
+            p-4
             w-full
-            text-lg
-            font-semibold
+            font-bold
           "
         >
           {loading
             ? "جارٍ التحقق..."
-            : "Redeem"}
+            : "تحقق"}
         </button>
 
-        {/* Success */}
-        {result && (
+        {/* ERROR */}
 
-          <div className="
-            mt-4
-            bg-green-50
-            border
-            border-green-200
-            rounded-xl
-            p-4
-            space-y-2
-          ">
+        {error && (
 
-            <div className="text-4xl">
-              ✅
-            </div>
-
-            <p className="font-bold text-green-700 text-lg">
-              تم استخدام الكوبون بنجاح
-            </p>
-
-            <p className="text-gray-700">
-              🎁 {result.reward}
-            </p>
-
-            <p className="text-sm text-gray-500">
-              {result.coupon_code}
-            </p>
-
+          <div
+            className="
+              mt-4
+              bg-red-100
+              text-red-700
+              p-3
+              rounded-xl
+              text-center
+            "
+          >
+            {error}
           </div>
 
         )}
 
-        {/* Error */}
-        {error && (
+        {/* SUCCESS */}
 
-          <div className="
-            mt-4
-            bg-red-50
-            border
-            border-red-200
-            rounded-xl
-            p-4
-          ">
+        {success && (
 
-            <div className="text-4xl mb-2">
-              ❌
+          <div
+            className="
+              mt-4
+              bg-green-100
+              text-green-700
+              p-3
+              rounded-xl
+              text-center
+            "
+          >
+            {success}
+          </div>
+
+        )}
+
+        {/* RESULT */}
+
+        {rewardData && (
+
+          <div
+            className="
+              mt-6
+              border
+              border-gray-200
+              rounded-2xl
+              p-5
+              space-y-3
+            "
+          >
+
+            <div className="text-center text-5xl">
+              🎁
             </div>
 
-            <p className="text-red-600 font-semibold">
-              {error}
+            <h2
+              className="
+                text-2xl
+                font-bold
+                text-center
+                text-black
+              "
+            >
+              {rewardData.reward_name}
+            </h2>
+
+            <p className="text-black">
+              📞 {rewardData.phone}
             </p>
+
+            <p className="text-black">
+              ⏳ ينتهي:
+              {" "}
+              {new Date(
+                rewardData.expires_at
+              ).toLocaleDateString()}
+            </p>
+
+            <p
+              className={
+                rewardData.redeemed
+                  ? "text-red-600 font-bold"
+                  : "text-green-600 font-bold"
+              }
+            >
+              {rewardData.redeemed
+                ? "❌ تم استخدامه"
+                : "✅ صالح"}
+            </p>
+
+            {!rewardData.redeemed && (
+
+              <button
+                onClick={redeemCode}
+
+                disabled={loading}
+
+                className="
+                  mt-4
+                  bg-green-600
+                  text-white
+                  rounded-xl
+                  p-4
+                  w-full
+                  font-bold
+                "
+              >
+                استخدام الكوبون
+              </button>
+
+            )}
 
           </div>
 
@@ -212,4 +444,3 @@ export default function RedeemRewardPage() {
     </div>
   );
 }
-
