@@ -12,6 +12,8 @@ export default function SpinWheelPage() {
 
   const [loading, setLoading] = useState(false);
 
+  const [selectedReward, setSelectedReward] = useState(null);
+
   const [result, setResult] = useState(null);
 
   // =====================================================
@@ -142,23 +144,18 @@ export default function SpinWheelPage() {
 
     if (spinningRef.current) return;
 
-    if (!phone.trim()) {
-
-      alert("أدخل رقم الجوال");
-
-      return;
-    }
-
     spinningRef.current = true;
 
     setLoading(true);
 
     setResult(null);
 
+    setSelectedReward(null);
+
     try {
 
       // ==========================================
-      // 1. GET REWARD
+      // GET REWARD
       // ==========================================
 
       const spinRes = await fetch(
@@ -188,7 +185,7 @@ export default function SpinWheelPage() {
       const reward = spinData.reward;
 
       // ==========================================
-      // 2. DETERMINE STOP ANGLE
+      // FIND SEGMENT
       // ==========================================
 
       const prizeIndex =
@@ -207,16 +204,19 @@ export default function SpinWheelPage() {
         );
 
       // ==========================================
-      // 3. START ANIMATION
+      // ANIMATION
       // ==========================================
 
       let current = 0;
 
       let speed = 0.35;
 
-      spinSoundRef.current.currentTime = 0;
+      if (spinSoundRef.current) {
 
-      spinSoundRef.current.play();
+        spinSoundRef.current.currentTime = 0;
+
+        spinSoundRef.current.play();
+      }
 
       const spin = setInterval(() => {
 
@@ -234,9 +234,15 @@ export default function SpinWheelPage() {
 
           drawWheel(stopAngle);
 
-          spinSoundRef.current.pause();
+          if (spinSoundRef.current) {
+            spinSoundRef.current.pause();
+          }
 
-          finishClaim(reward);
+          setSelectedReward(reward);
+
+          spinningRef.current = false;
+
+          setLoading(false);
         }
 
       }, 16);
@@ -254,12 +260,21 @@ export default function SpinWheelPage() {
   };
 
   // =====================================================
-  // CLAIM REWARD
+  // SEND REWARD
   // =====================================================
 
-  const finishClaim = async (reward) => {
+  const sendReward = async () => {
+
+    if (!phone.trim()) {
+
+      alert("أدخل رقم الجوال");
+
+      return;
+    }
 
     try {
+
+      setLoading(true);
 
       const res = await fetch(
         "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/claim-reward",
@@ -272,7 +287,7 @@ export default function SpinWheelPage() {
 
           body: JSON.stringify({
             phone,
-            reward,
+            reward: selectedReward,
           }),
         }
       );
@@ -285,18 +300,18 @@ export default function SpinWheelPage() {
 
       } else {
 
-        alert(data.error || "Claim failed");
+        alert(
+          data.error || "حدث خطأ"
+        );
       }
 
     } catch (err) {
 
       console.error(err);
 
-      alert("حدث خطأ");
+      alert("Network Error");
 
     } finally {
-
-      spinningRef.current = false;
 
       setLoading(false);
     }
@@ -321,11 +336,15 @@ export default function SpinWheelPage() {
       "
     >
 
+      {/* audio */}
+
       <audio
         ref={spinSoundRef}
         src="/spin-wheel-sound.mp3"
         preload="auto"
       />
+
+      {/* title */}
 
       <h1 className="
         text-4xl
@@ -376,30 +395,79 @@ export default function SpinWheelPage() {
 
       </div>
 
-      {/* phone */}
+      {/* reward result */}
 
-      <input
-        type="tel"
-        placeholder="أدخل رقم الجوال"
-        value={phone}
-        onChange={(e) =>
-          setPhone(e.target.value)
-        }
-        className="
+      {selectedReward && !result && (
+
+        <div className="
           mt-8
-          border
-          border-gray-300
-          rounded-xl
-          p-4
-          text-center
-          text-lg
-          w-full
-          max-w-sm
           bg-white
-        "
-      />
+          p-6
+          rounded-2xl
+          shadow-lg
+          text-center
+          max-w-md
+          w-full
+        ">
 
-      {/* result */}
+          <div className="text-5xl mb-3">
+            🎉
+          </div>
+
+          <h2 className="
+            text-2xl
+            font-bold
+            mb-6
+          ">
+            {selectedReward}
+          </h2>
+
+          {/* phone */}
+
+          <input
+            type="tel"
+            placeholder="أدخل رقم الجوال"
+            value={phone}
+            onChange={(e) =>
+              setPhone(e.target.value)
+            }
+            className="
+              border
+              border-gray-300
+              rounded-xl
+              p-4
+              text-center
+              text-lg
+              w-full
+              bg-white
+            "
+          />
+
+          {/* send button */}
+
+          <button
+            onClick={sendReward}
+            disabled={loading}
+            className="
+              mt-4
+              bg-black
+              text-white
+              rounded-xl
+              p-4
+              w-full
+              font-bold
+            "
+          >
+            {loading
+              ? "جارٍ الإرسال..."
+              : "إرسال الجائزة"}
+          </button>
+
+        </div>
+
+      )}
+
+      {/* final result */}
 
       {result && (
 
@@ -415,15 +483,22 @@ export default function SpinWheelPage() {
         ">
 
           <div className="text-5xl mb-3">
-            🎁
+            ✅
           </div>
 
           <h2 className="
             text-2xl
             font-bold
           ">
-            {result.reward}
+            تم إرسال الجائزة
           </h2>
+
+          <p className="
+            mt-4
+            text-lg
+          ">
+            🎁 {result.reward}
+          </p>
 
           {result.coupon_code && (
 
@@ -442,7 +517,7 @@ export default function SpinWheelPage() {
             mt-4
             text-gray-500
           ">
-            تم إرسال الجائزة عبر الواتساب 📲
+            تم إرسال الرسالة عبر الواتساب 📲
           </p>
 
         </div>
