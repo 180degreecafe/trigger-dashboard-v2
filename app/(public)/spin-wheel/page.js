@@ -15,8 +15,7 @@ export default function SpinWheelPage() {
   const [selectedReward, setSelectedReward] =
     useState(null);
 
-  const [result, setResult] =
-    useState(null);
+  const [result, setResult] = useState(null);
 
   // =====================================================
   // REFS
@@ -24,92 +23,45 @@ export default function SpinWheelPage() {
 
   const canvasRef = useRef(null);
 
+  const spinSoundRef = useRef(null);
+
   const spinningRef = useRef(false);
 
   // =====================================================
-  // VISUAL ONLY
+  // PRIZES
   // =====================================================
 
   const prizes = [
-    "🎁",
-    "☕",
-    "⭐",
-    "🎉",
-    "🔥",
-    "💎",
-    "🎯",
-    "🥳",
+    "حظاً أوفر",
+    "20% خصم",
+    "30% خصم",
+    "اشتر 1 واحصل 1 مجان",
+    "20 نقطة اضافية",
+    "بن قهوة من اختيارك",
+    "شنطة V60",
+    "جهاز اسبريسو",
   ];
-
-  // =====================================================
-  // SOUND
-  // =====================================================
-
-  const playSpinSound = () => {
-
-    try {
-
-      const audio =
-        new Audio("/spin-wheel-sound.mp3");
-
-      audio.volume = 0.5;
-
-      audio.loop = true;
-
-      audio.play().catch((err) => {
-
-        console.log(
-          "🔇 SOUND BLOCKED"
-        );
-
-        console.log(err);
-      });
-
-      console.log(
-        "🔊 SOUND STARTED"
-      );
-
-      return audio;
-
-    } catch (err) {
-
-      console.log(
-        "❌ AUDIO ERROR"
-      );
-
-      console.log(err);
-
-      return null;
-    }
-  };
 
   // =====================================================
   // DRAW WHEEL
   // =====================================================
 
-  const drawWheel = (
-    rotation = 0
-  ) => {
+  const drawWheel = (rotation = 0) => {
 
-    const canvas =
-      canvasRef.current;
+    const canvas = canvasRef.current;
 
     if (!canvas) return;
 
-    const ctx =
-      canvas.getContext("2d");
+    const ctx = canvas.getContext("2d");
 
-    const centerX =
-      canvas.width / 2;
+    const centerX = canvas.width / 2;
 
-    const centerY =
-      canvas.height / 2;
+    const centerY = canvas.height / 2;
 
     const radius = 180;
 
     const angle =
-      (2 * Math.PI)
-      / prizes.length;
+      (2 * Math.PI) / prizes.length;
 
     ctx.clearRect(
       0,
@@ -120,32 +72,22 @@ export default function SpinWheelPage() {
 
     ctx.save();
 
-    ctx.translate(
-      centerX,
-      centerY
-    );
+    ctx.translate(centerX, centerY);
 
     ctx.rotate(rotation);
 
-    for (
-      let i = 0;
-      i < prizes.length;
-      i++
-    ) {
+    for (let i = 0; i < prizes.length; i++) {
 
-      const start =
-        i * angle;
+      const start = i * angle;
 
-      const end =
-        start + angle;
+      const end = start + angle;
 
       const color =
-        `hsl(${i * 360 / prizes.length}, 75%, 60%)`;
+        `hsl(${i * 360 / prizes.length}, 70%, 60%)`;
 
       ctx.beginPath();
 
-      ctx.fillStyle =
-        color;
+      ctx.fillStyle = color;
 
       ctx.moveTo(0, 0);
 
@@ -159,71 +101,49 @@ export default function SpinWheelPage() {
 
       ctx.fill();
 
-      ctx.lineWidth = 3;
-
-      ctx.strokeStyle =
-        "#fff";
-
-      ctx.stroke();
-
-      // TEXT
+      // text
 
       ctx.save();
 
-      ctx.rotate(
-        start + angle / 2
-      );
+      ctx.rotate(start + angle / 2);
 
-      ctx.translate(
-        radius * 0.68,
-        0
-      );
+      ctx.translate(radius * 0.65, 0);
 
-      ctx.rotate(
-        Math.PI / 2
-      );
+      ctx.rotate(Math.PI / 2);
 
-      ctx.fillStyle =
-        "#fff";
+      ctx.fillStyle = "#fff";
 
-      ctx.font =
-        "bold 30px Arial";
+      ctx.font = "bold 14px Arial";
 
-      ctx.textAlign =
-        "center";
+      ctx.textAlign = "center";
 
-      ctx.fillText(
-        prizes[i],
-        0,
-        0
-      );
+      ctx.fillText(prizes[i], 0, 0);
 
       ctx.restore();
     }
 
     ctx.restore();
 
-    // POINTER
+    // pointer
 
     ctx.beginPath();
 
     ctx.moveTo(
-      centerX - 14,
+      centerX - 12,
       centerY - radius - 10
     );
 
     ctx.lineTo(
-      centerX + 14,
+      centerX + 12,
       centerY - radius - 10
     );
 
     ctx.lineTo(
       centerX,
-      centerY - radius + 18
+      centerY - radius + 15
     );
 
-    ctx.fillStyle =
-      "#ef4444";
+    ctx.fillStyle = "#ef4444";
 
     ctx.fill();
   };
@@ -244,13 +164,12 @@ export default function SpinWheelPage() {
 
   const startSpin = async () => {
 
-    console.log(
-      "🎯 START SPIN"
-    );
+    console.log("🎯 START SPIN");
 
-    if (
-      spinningRef.current
-    ) {
+    if (spinningRef.current) {
+
+      console.log("⛔ Already spinning");
+
       return;
     }
 
@@ -262,53 +181,30 @@ export default function SpinWheelPage() {
 
     setSelectedReward(null);
 
-    // ==========================================
-    // SOUND
-    // ==========================================
-
-    const sound =
-      playSpinSound();
-
     try {
 
       // ==========================================
-      // VISUAL ONLY
+      // CALL BACKEND
       // ==========================================
 
-      const visualIndex =
-        Math.floor(
-          Math.random()
-          * prizes.length
-        );
-
       console.log(
-        "🎡 VISUAL INDEX:",
-        visualIndex
+        "📡 Calling spin-wheel..."
       );
 
-      // ==========================================
-      // BACKEND
-      // ==========================================
+      const spinRes = await fetch(
+        "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/spin-wheel",
+        {
+          method: "POST",
 
-      console.log(
-        "📡 CALLING SPIN-WHEEL..."
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+        }
       );
 
-      const spinRes =
-        await fetch(
-          "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/spin-wheel",
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-          }
-        );
-
       console.log(
-        "📥 STATUS:",
+        "📥 Status:",
         spinRes.status
       );
 
@@ -321,53 +217,107 @@ export default function SpinWheelPage() {
 
       console.log(rawText);
 
-      const spinData =
-        JSON.parse(rawText);
+      let spinData;
+
+      try {
+
+        spinData =
+          JSON.parse(rawText);
+
+      } catch (err) {
+
+        console.error(
+          "❌ JSON PARSE ERROR"
+        );
+
+        console.error(err);
+
+        alert("Invalid JSON");
+
+        spinningRef.current = false;
+
+        setLoading(false);
+
+        return;
+      }
 
       console.log(
-        "✅ PARSED:"
+        "✅ Parsed JSON:"
       );
 
       console.log(spinData);
 
       if (!spinRes.ok) {
 
+        console.error(
+          "❌ HTTP ERROR"
+        );
+
+        console.error(spinData);
+
         alert(
           spinData.error ||
           "Spin Error"
         );
 
-        setLoading(false);
-
         spinningRef.current = false;
 
-        if (sound) {
-          sound.pause();
-        }
+        setLoading(false);
 
         return;
       }
 
       // ==========================================
-      // REAL REWARD
+      // REWARD
       // ==========================================
 
+      const rewardName =
+        spinData.reward_name;
+
+      const rewardId =
+        spinData.reward_id;
+
+      console.log(
+        "🏆 REWARD:",
+        rewardName
+      );
+
+      console.log(
+        "🆔 REWARD ID:",
+        rewardId
+      );
+
       setSelectedReward({
-
-        id:
-          spinData.reward_id,
-
-        name:
-          spinData.reward_name,
+        id: rewardId,
+        name: rewardName,
       });
 
-      console.log(
-        "🏆 REWARD:"
-      );
+      // ==========================================
+      // FIND SEGMENT
+      // ==========================================
+
+      const prizeIndex =
+        prizes.findIndex(
+          (p) => p === rewardName
+        );
 
       console.log(
-        spinData.reward_name
+        "🎡 Prize Index:",
+        prizeIndex
       );
+
+      if (prizeIndex === -1) {
+
+        alert(
+          "Reward not found in wheel"
+        );
+
+        spinningRef.current = false;
+
+        setLoading(false);
+
+        return;
+      }
 
       // ==========================================
       // ANGLES
@@ -384,26 +334,43 @@ export default function SpinWheelPage() {
           (2 * Math.PI)
           -
           (
-            visualIndex * anglePerPrize
+            prizeIndex * anglePerPrize
             + anglePerPrize / 2
           )
         );
 
       const stopAngle =
-        (
-          fullSpins
-          * 2
-          * Math.PI
-        )
+        (fullSpins * 2 * Math.PI)
         + targetAngle;
 
       console.log(
-        "🛑 STOP ANGLE:"
-      );
-
-      console.log(
+        "🛑 Stop Angle:",
         stopAngle
       );
+
+      // ==========================================
+      // SOUND
+      // ==========================================
+
+      if (spinSoundRef.current) {
+
+        spinSoundRef.current.currentTime = 0;
+
+        const playPromise =
+          spinSoundRef.current.play();
+
+        if (playPromise !== undefined) {
+
+          playPromise.catch((err) => {
+
+            console.log(
+              "🔇 iPhone autoplay blocked"
+            );
+
+            console.log(err);
+          });
+        }
+      }
 
       // ==========================================
       // ANIMATION
@@ -414,8 +381,7 @@ export default function SpinWheelPage() {
       const start =
         performance.now();
 
-      const animate =
-        (time) => {
+      const animate = (time) => {
 
         const elapsed =
           time - start;
@@ -427,22 +393,14 @@ export default function SpinWheelPage() {
           );
 
         const eased =
-          1 -
-          Math.pow(
-            1 - progress,
-            4
-          );
+          1 - Math.pow(1 - progress, 3);
 
         const rotation =
           stopAngle * eased;
 
-        drawWheel(
-          rotation
-        );
+        drawWheel(rotation);
 
-        if (
-          progress < 1
-        ) {
+        if (progress < 1) {
 
           requestAnimationFrame(
             animate
@@ -451,11 +409,11 @@ export default function SpinWheelPage() {
         } else {
 
           console.log(
-            "✅ FINISHED"
+            "✅ Spin finished"
           );
 
-          if (sound) {
-            sound.pause();
+          if (spinSoundRef.current) {
+            spinSoundRef.current.pause();
           }
 
           spinningRef.current = false;
@@ -470,19 +428,13 @@ export default function SpinWheelPage() {
 
     } catch (err) {
 
-      console.log(
+      console.error(
         "🔥 NETWORK ERROR"
       );
 
-      console.log(err);
+      console.error(err);
 
-      if (sound) {
-        sound.pause();
-      }
-
-      alert(
-        "Network Error"
-      );
+      alert("Network Error");
 
       spinningRef.current = false;
 
@@ -496,28 +448,25 @@ export default function SpinWheelPage() {
 
   const sendReward = async () => {
 
-    console.log(
-      "📲 SEND REWARD"
-    );
+    console.log("📲 SEND REWARD");
+
+    console.log("PHONE:", phone);
 
     console.log(
+      "REWARD:",
       selectedReward
     );
 
     if (!phone.trim()) {
 
-      alert(
-        "أدخل رقم الجوال"
-      );
+      alert("أدخل رقم الجوال");
 
       return;
     }
 
     if (!selectedReward) {
 
-      alert(
-        "لا توجد جائزة"
-      );
+      alert("لا توجد جائزة");
 
       return;
     }
@@ -526,36 +475,35 @@ export default function SpinWheelPage() {
 
       setLoading(true);
 
-      const res =
-        await fetch(
-          "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/claim-reward",
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify({
-
-                phone,
-
-                reward_id:
-                  selectedReward.id,
-
-                reward_name:
-                  selectedReward.name,
-              }),
-          }
-        );
-
       console.log(
-        "📥 CLAIM STATUS:"
+        "📡 Calling claim-reward"
+      );
+
+      const res = await fetch(
+        "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/claim-reward",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+
+            phone,
+
+            reward_id:
+              selectedReward.id,
+
+            reward_name:
+              selectedReward.name,
+          }),
+        }
       );
 
       console.log(
+        "📥 Claim Status:",
         res.status
       );
 
@@ -563,27 +511,44 @@ export default function SpinWheelPage() {
         await res.text();
 
       console.log(
-        "📦 CLAIM RAW:"
+        "📦 CLAIM RAW RESPONSE:"
       );
 
-      console.log(
-        rawText
-      );
+      console.log(rawText);
 
-      const data =
-        JSON.parse(
-          rawText
+      let data;
+
+      try {
+
+        data =
+          JSON.parse(rawText);
+
+      } catch (err) {
+
+        console.error(
+          "❌ CLAIM JSON ERROR"
         );
 
-      console.log(
-        "✅ CLAIM:"
-      );
+        console.error(err);
+
+        alert("Invalid JSON");
+
+        setLoading(false);
+
+        return;
+      }
 
       console.log(
-        data
+        "✅ CLAIM RESPONSE:"
       );
+
+      console.log(data);
 
       if (!res.ok) {
+
+        console.error(
+          "❌ CLAIM HTTP ERROR"
+        );
 
         alert(
           data.error ||
@@ -599,15 +564,13 @@ export default function SpinWheelPage() {
 
     } catch (err) {
 
-      console.log(
-        "🔥 CLAIM ERROR"
+      console.error(
+        "🔥 CLAIM NETWORK ERROR"
       );
 
-      console.log(err);
+      console.error(err);
 
-      alert(
-        "Network Error"
-      );
+      alert("Network Error");
 
     } finally {
 
@@ -634,12 +597,22 @@ export default function SpinWheelPage() {
       "
     >
 
+      {/* AUDIO */}
+
+      <audio
+        ref={spinSoundRef}
+        src="/spin-wheel-sound.mp3"
+        preload="auto"
+      />
+
+      {/* TITLE */}
+
       <h1
         className="
           text-4xl
           font-bold
-          text-black
           mb-8
+          text-black
         "
       >
         🎉 عجلة الحظ 🎉
@@ -656,29 +629,29 @@ export default function SpinWheelPage() {
           className="
             bg-white
             rounded-full
-            shadow-2xl
+            shadow-xl
           "
         />
 
+        {/* CENTER BUTTON */}
+
         <button
           onClick={startSpin}
-
           disabled={loading}
-
           className="
             absolute
             top-1/2
             left-1/2
             -translate-x-1/2
             -translate-y-1/2
-            w-24
-            h-24
-            rounded-full
             bg-black
             text-white
+            rounded-full
+            w-20
+            h-20
             font-bold
             text-xl
-            shadow-xl
+            shadow-lg
           "
         >
           {loading
@@ -688,7 +661,7 @@ export default function SpinWheelPage() {
 
       </div>
 
-      {/* CLAIM */}
+      {/* CLAIM FORM */}
 
       {selectedReward && !result && (
 
@@ -698,23 +671,23 @@ export default function SpinWheelPage() {
             bg-white
             p-6
             rounded-2xl
-            shadow-xl
-            w-full
-            max-w-md
+            shadow-lg
             text-center
+            max-w-md
+            w-full
           "
         >
 
-          <div className="text-6xl">
-            🎁
+          <div className="text-5xl mb-3">
+            🎉
           </div>
 
           <h2
             className="
               text-2xl
               font-bold
+              mb-6
               text-black
-              mt-4
             "
           >
             {selectedReward.name}
@@ -728,21 +701,21 @@ export default function SpinWheelPage() {
             value={phone}
 
             onChange={(e) =>
-              setPhone(
-                e.target.value
-              )
+              setPhone(e.target.value)
             }
 
             className="
-              mt-6
               border
               border-gray-300
               rounded-xl
               p-4
-              w-full
               text-center
-              text-black
+              text-lg
+              w-full
               bg-white
+              text-black
+              placeholder:text-gray-400
+              focus:outline-none
             "
           />
 
@@ -780,14 +753,14 @@ export default function SpinWheelPage() {
             bg-white
             p-6
             rounded-2xl
-            shadow-xl
+            shadow-lg
             text-center
             max-w-md
             w-full
           "
         >
 
-          <div className="text-6xl">
+          <div className="text-5xl mb-3">
             ✅
           </div>
 
@@ -796,7 +769,6 @@ export default function SpinWheelPage() {
               text-2xl
               font-bold
               text-black
-              mt-4
             "
           >
             تم إرسال الجائزة
@@ -805,8 +777,8 @@ export default function SpinWheelPage() {
           <p
             className="
               mt-4
-              text-black
               text-lg
+              text-black
             "
           >
             🎁 {result.reward}
@@ -815,13 +787,22 @@ export default function SpinWheelPage() {
           <div
             className="
               mt-4
-              text-5xl
+              text-4xl
               font-bold
               text-black
             "
           >
             {result.coupon_code}
           </div>
+
+          <p
+            className="
+              mt-4
+              text-gray-500
+            "
+          >
+            تم إرسال الرسالة عبر الواتساب 📲
+          </p>
 
         </div>
 
