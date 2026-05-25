@@ -121,7 +121,7 @@ export default function CampaignsPage() {
         <h1 className="text-2xl font-semibold">Campaigns</h1>
 
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => {window.location.href = "/campaigns/new";}}
           className="btn-primary"
         >
           + New Campaign
