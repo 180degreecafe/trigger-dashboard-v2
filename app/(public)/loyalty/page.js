@@ -245,7 +245,7 @@ export default function CheckPointsPage() {
                 {settings.page_title || "رحلتك مع 180°"}
               </h1>
               <p className="text-sm opacity-70 mt-1">
-                {settings.welcome_text || "هلا فيك، هذه رحلتك مع 180°"}
+                {settings.welcome_text || "اهلاً وسهلاً ، هذه رحلتك معنا"}
               </p>
             </div>
 
@@ -278,7 +278,7 @@ export default function CheckPointsPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mt-6">
-                  <Stat label="نقطة" value={loyalty?.points ?? 0} icon="⭐" />
+                  <Stat label="دينار" value={loyalty?.points ?? 0} icon="⭐" />
                   <Stat label="زيارة" value={loyalty?.visits ?? 0} icon="☕" />
                 </div>
               </div>
